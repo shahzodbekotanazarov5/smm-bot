@@ -23,12 +23,21 @@ final class Database
 
             $dsn = "mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4";
 
+            $options = [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ];
+
+            if (!in_array($host, ['127.0.0.1', 'localhost'], true) || getenv('DB_SSL') === 'true') {
+                if (file_exists('/etc/ssl/certs/ca-certificates.crt')) {
+                    $options[PDO::MYSQL_ATTR_SSL_CA] = '/etc/ssl/certs/ca-certificates.crt';
+                }
+                $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+            }
+
             try {
-                self::$connection = new PDO($dsn, Config::get('db.user'), Config::get('db.pass'), [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                ]);
+                self::$connection = new PDO($dsn, Config::get('db.user'), Config::get('db.pass'), $options);
             } catch (PDOException $e) {
                 Logger::error('Database connection failed: ' . $e->getMessage());
                 throw $e;
