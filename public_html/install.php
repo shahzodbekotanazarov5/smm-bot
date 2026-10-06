@@ -22,6 +22,26 @@ if (PHP_SAPI !== 'cli') {
         exit;
     }
 
+    if ($action === 'logs') {
+        $appLog = dirname(__DIR__) . '/logs/app.log';
+        $phpLog = dirname(__DIR__) . '/logs/php_errors.log';
+        echo "=== APP.LOG ===\n";
+        if (is_file($appLog)) {
+            $lines = file($appLog);
+            echo implode('', array_slice($lines, -60));
+        } else {
+            echo "No app.log found.\n";
+        }
+        echo "\n=== PHP_ERRORS.LOG ===\n";
+        if (is_file($phpLog)) {
+            $lines = file($phpLog);
+            echo implode('', array_slice($lines, -60));
+        } else {
+            echo "No php_errors.log found.\n";
+        }
+        exit;
+    }
+
     if ($action === 'debug_tg') {
         $token = Config::get('bot.token');
         echo "Token prefix: " . substr((string) $token, 0, 10) . "...\n";
