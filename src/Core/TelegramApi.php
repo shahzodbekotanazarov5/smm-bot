@@ -36,7 +36,7 @@ final class TelegramApi
         return $outbox;
     }
 
-    public static function call(string $method, array $params = []): ?array
+    public static function call(string $method, array $params = []): mixed
     {
         if (self::$simulate) {
             return self::simulateCall($method, $params);
@@ -61,10 +61,14 @@ final class TelegramApi
                 'response' => $response['body'] ?? $response['raw'] ?? $response['error'] ?? null,
             ]);
 
-            return null;
+            return [
+                'ok' => false,
+                'error' => $response['body'] ?? $response['raw'] ?? $response['error'] ?? 'Unknown failure',
+                'status' => $response['status'] ?? null,
+            ];
         }
 
-        return $response['body']['result'] ?? [];
+        return $response['body']['result'] ?? true;
     }
 
     public static function sendMessage(int|string $chatId, string $text, ?array $replyMarkup = null, string $parseMode = 'HTML'): ?array
@@ -131,7 +135,7 @@ final class TelegramApi
         return self::call('getChat', ['chat_id' => $chatId]);
     }
 
-    public static function setWebhook(string $url, string $secretToken): ?array
+    public static function setWebhook(string $url, string $secretToken): mixed
     {
         return self::call('setWebhook', [
             'url' => $url,
@@ -140,7 +144,7 @@ final class TelegramApi
         ]);
     }
 
-    public static function getWebhookInfo(): ?array
+    public static function getWebhookInfo(): mixed
     {
         return self::call('getWebhookInfo');
     }

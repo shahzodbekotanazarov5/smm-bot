@@ -13,9 +13,9 @@ return [
     // credentials (and set default_provider.api_url once you confirm it —
     // see the TODO below) before actually deploying. See README.md "Install".
     'bot' => [
-        'token' => '8703800913:AAHbTR9gVCvLtpUZRrwTOI37SkvMuLAnWLs',
-        'username' => 'pustoyo_bot',
-        'webhook_secret' => 'local-test-secret-not-for-production',
+        'token' => getenv('BOT_TOKEN') ?: '8703800913:AAHbTR9gVCvLtpUZRrwTOI37SkvMuLAnWLs',
+        'username' => getenv('BOT_USERNAME') ?: 'pustoyo_bot',
+        'webhook_secret' => getenv('WEBHOOK_SECRET') ?: 'local-test-secret-not-for-production',
     ],
 
     'db' => [
@@ -46,5 +46,5 @@ return [
         'currency' => 'UZS',
     ],
 
-    'cron_token' => 'local-test-cron-token',
+    'cron_token' => getenv('CRON_TOKEN') ?: 'local-test-cron-token',
 ];

@@ -22,6 +22,14 @@ if (PHP_SAPI !== 'cli') {
         exit;
     }
 
+    if ($action === 'debug_tg') {
+        $token = Config::get('bot.token');
+        echo "Token prefix: " . substr((string) $token, 0, 10) . "...\n";
+        $getMe = \App\Core\Http::get("https://api.telegram.org/bot{$token}/getMe");
+        echo "getMe response:\n" . json_encode($getMe, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        exit;
+    }
+
     if ($action === 'webhook_info') {
         $info = \App\Core\TelegramApi::getWebhookInfo();
         echo "Webhook Info:\n" . json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
