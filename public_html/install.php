@@ -14,15 +14,39 @@ if (PHP_SAPI !== 'cli') {
     $cronToken = (string) Config::get('cron_token', '');
     $providedToken = (string) ($_GET['token'] ?? '');
     $confirmed = ($_GET['confirm'] ?? '') === 'yes';
-
-    if (!$confirmed) {
-        echo "To run the installer via web browser, visit ?confirm=yes" . ($cronToken !== '' ? '&token=YOUR_CRON_TOKEN' : '') . "\n";
-        exit;
-    }
+    $action = (string) ($_GET['action'] ?? 'install');
 
     if ($cronToken !== '' && !hash_equals($cronToken, $providedToken)) {
         http_response_code(403);
         echo "Forbidden: invalid or missing ?token parameter.\n";
+        exit;
+    }
+
+    if ($action === 'webhook_info') {
+        $info = \App\Core\TelegramApi::getWebhookInfo();
+        echo "Webhook Info:\n" . json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        exit;
+    }
+
+    if ($action === 'set_webhook') {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'https';
+        $host = $_SERVER['HTTP_HOST'] ?? 'smm-bot-v4gx.onrender.com';
+        $webhookUrl = "{$scheme}://{$host}/webhook.php";
+        $secretToken = (string) Config::get('bot.webhook_secret', '');
+
+        echo "Registering webhook to: {$webhookUrl}\n";
+        $res = \App\Core\TelegramApi::setWebhook($webhookUrl, $secretToken);
+        echo "Result:\n" . json_encode($res, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n\n";
+
+        $info = \App\Core\TelegramApi::getWebhookInfo();
+        echo "Webhook Info:\n" . json_encode($info, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        exit;
+    }
+
+    if (!$confirmed) {
+        echo "To run the installer via web browser, visit ?confirm=yes" . ($cronToken !== '' ? '&token=YOUR_CRON_TOKEN' : '') . "\n";
+        echo "To set webhook: ?action=set_webhook" . ($cronToken !== '' ? '&token=YOUR_CRON_TOKEN' : '') . "\n";
+        echo "To view webhook: ?action=webhook_info" . ($cronToken !== '' ? '&token=YOUR_CRON_TOKEN' : '') . "\n";
         exit;
     }
 }
@@ -117,4 +141,13 @@ if (!empty($defaultProvider['api_url']) && !empty($defaultProvider['api_key'])) 
     }
 }
 
-echo "\nInstall complete. Next: set the Telegram webhook (see README.md).\n";
+// Automatically register Telegram webhook
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'https';
+$host = $_SERVER['HTTP_HOST'] ?? 'smm-bot-v4gx.onrender.com';
+$webhookUrl = "{$scheme}://{$host}/webhook.php";
+$secretToken = (string) Config::get('bot.webhook_secret', '');
+echo "\nSetting Telegram Webhook to {$webhookUrl}...\n";
+$whResult = \App\Core\TelegramApi::setWebhook($webhookUrl, $secretToken);
+echo "Webhook status: " . json_encode($whResult, JSON_UNESCAPED_SLASHES) . "\n";
+
+echo "\nInstall complete. Next: test your bot in Telegram!\n";
