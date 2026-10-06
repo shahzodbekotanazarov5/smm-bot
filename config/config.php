@@ -13,7 +13,7 @@ return [
     // credentials (and set default_provider.api_url once you confirm it —
     // see the TODO below) before actually deploying. See README.md "Install".
     'bot' => [
-        'token' => getenv('BOT_TOKEN') ?: '8703800913:AAHbTR9gVCvLtpUZRrwTOI37SkvMuLAnWLs',
+        'token' => getenv('BOT_TOKEN') ?: '8703800913:AAFzz-P7vWUpBlnOvuIRyolJF1b5w5G2B6w',
         'username' => getenv('BOT_USERNAME') ?: 'pustoyo_bot',
         'webhook_secret' => getenv('WEBHOOK_SECRET') ?: 'local-test-secret-not-for-production',
     ],
