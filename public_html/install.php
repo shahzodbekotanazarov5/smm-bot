@@ -118,6 +118,7 @@ if (PHP_SAPI !== 'cli') {
     }
 
     if ($action === 'debug_tg') {
+        echo "BUILD: v2-provider-sync\n";
         $token = Config::get('bot.token');
         echo "Token prefix: " . substr((string) $token, 0, 10) . "...\n";
         $getMe = \App\Core\Http::get("https://api.telegram.org/bot{$token}/getMe");
