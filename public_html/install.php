@@ -57,6 +57,9 @@ if (PHP_SAPI !== 'cli') {
         $providers = Database::fetchAll('SELECT id, name, api_url, currency, is_active FROM providers');
         echo "Providers (" . count($providers) . "):\n" . json_encode($providers, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
 
+        $channels = Database::fetchAll('SELECT * FROM channels');
+        echo "Channels (" . count($channels) . "):\n" . json_encode($channels, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+
         $cats = Database::fetchAll('SELECT id, name_uz, is_active FROM categories');
         echo "Categories (" . count($cats) . "):\n" . json_encode($cats, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
 
@@ -69,6 +72,12 @@ if (PHP_SAPI !== 'cli') {
     if ($action === 'clear_states') {
         Database::execute('DELETE FROM user_states');
         echo "All user_states cleared successfully.\n";
+        exit;
+    }
+
+    if ($action === 'clear_channels') {
+        Database::execute('DELETE FROM channels');
+        echo "All channels deleted successfully from mandatory subscriptions.\n";
         exit;
     }
 
