@@ -85,7 +85,10 @@ final class AdminTicketHandler
         $target = UserService::find((int) $ticket['user_id']);
         $messages = TicketService::messages($ticketId);
 
-        $who = htmlspecialchars($target['username'] ? '@' . $target['username'] : (string) $target['telegram_id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $lines = [];
+        $who = $target !== null
+            ? htmlspecialchars($target['username'] ? '@' . $target['username'] : (string) $target['telegram_id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            : 'Foydalanuvchi #' . $ticket['user_id'];
         $lines[] = '👤 ' . $who;
         $lines[] = '';
 

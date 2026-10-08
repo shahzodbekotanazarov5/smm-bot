@@ -14,7 +14,7 @@ use App\Support\Keyboard;
 
 final class AdminMenuHandler
 {
-    public static function showMenu(Update $update, array $user, string $locale): void
+    public static function showMenu(Update $update, array $user, string $locale, bool $edit = false): void
     {
         $currency = (string) AdminService::getSetting('currency_label', "so'm");
         $text = I18nService::t('admin.menu', [], $locale) . "\n\n" . I18nService::t('admin.stats', [
@@ -33,12 +33,16 @@ final class AdminMenuHandler
             [Keyboard::button(I18nService::t('admin.menu_settings', [], $locale), 'adm:settings:menu')],
         ];
 
-        TelegramApi::sendMessage((int) $update->chatId, $text, Keyboard::inline($buttons));
+        if ($edit && $update->callbackMessageId !== null) {
+            TelegramApi::editMessageText((int) $update->chatId, $update->callbackMessageId, $text, Keyboard::inline($buttons));
+        } else {
+            TelegramApi::sendMessage((int) $update->chatId, $text, Keyboard::inline($buttons));
+        }
     }
 
     public static function handleCallback(array $parts, Update $update, array $user, string $locale): void
     {
         TelegramApi::answerCallbackQuery((string) $update->callbackQueryId);
-        self::showMenu($update, $user, $locale);
+        self::showMenu($update, $user, $locale, true);
     }
 }

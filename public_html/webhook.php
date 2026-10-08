@@ -39,6 +39,22 @@ try {
 } catch (\Throwable $e) {
     Logger::error('Unhandled webhook exception: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
 
+    try {
+        \App\Core\Database::execute('CREATE TABLE IF NOT EXISTS bot_errors (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            error_message TEXT NOT NULL,
+            stack_trace TEXT NOT NULL,
+            update_data TEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+
+        \App\Core\Database::execute('INSERT INTO bot_errors (error_message, stack_trace, update_data) VALUES (:err, :tr, :upd)', [
+            'err' => $e->getMessage(),
+            'tr' => $e->getTraceAsString(),
+            'upd' => is_string($raw) ? $raw : json_encode($payload, JSON_UNESCAPED_UNICODE),
+        ]);
+    } catch (\Throwable) {}
+
     if ($update !== null && $update->chatId !== null) {
         TelegramApi::sendMessage((int) $update->chatId, I18nService::t('common.error', [], (string) Config::get('default_locale', 'uz')));
     }

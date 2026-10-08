@@ -22,6 +22,48 @@ if (PHP_SAPI !== 'cli') {
         exit;
     }
 
+    if ($action === 'errors') {
+        try {
+            $errors = Database::fetchAll('SELECT * FROM bot_errors ORDER BY id DESC LIMIT 25');
+            echo "Total recorded bot errors: " . count($errors) . "\n\n";
+            foreach ($errors as $err) {
+                echo "[#{$err['id']}] {$err['created_at']}: {$err['error_message']}\n";
+                echo "Stack trace:\n{$err['stack_trace']}\n";
+                echo "Payload: {$err['update_data']}\n";
+                echo str_repeat('-', 50) . "\n";
+            }
+        } catch (\Throwable $e) {
+            echo "Error loading bot_errors table: " . $e->getMessage() . "\n";
+        }
+        exit;
+    }
+
+    if ($action === 'db_inspect') {
+        echo "=== DATABASE INSPECTION ===\n";
+        $users = Database::fetchAll('SELECT id, telegram_id, username, first_name, language, balance, is_banned, last_message_at FROM users');
+        echo "Users (" . count($users) . "):\n" . json_encode($users, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+
+        $states = Database::fetchAll('SELECT * FROM user_states');
+        echo "User States (" . count($states) . "):\n" . json_encode($states, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+
+        $providers = Database::fetchAll('SELECT id, name, api_url, currency, is_active FROM providers');
+        echo "Providers (" . count($providers) . "):\n" . json_encode($providers, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+
+        $cats = Database::fetchAll('SELECT id, name_uz, is_active FROM categories');
+        echo "Categories (" . count($cats) . "):\n" . json_encode($cats, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+
+        $settings = Database::fetchAll('SELECT * FROM settings');
+        echo "Settings (" . count($settings) . "):\n" . json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+
+        exit;
+    }
+
+    if ($action === 'clear_states') {
+        Database::execute('DELETE FROM user_states');
+        echo "All user_states cleared successfully.\n";
+        exit;
+    }
+
     if ($action === 'logs') {
         $appLog = dirname(__DIR__) . '/logs/app.log';
         $phpLog = dirname(__DIR__) . '/logs/php_errors.log';

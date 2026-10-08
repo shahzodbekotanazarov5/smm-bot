@@ -29,6 +29,38 @@ final class Router
 
         $state = SessionState::get($telegramId);
         if ($state !== null) {
+            if ($update->isMessage()) {
+                $text = trim((string) $update->text);
+                if (str_starts_with($text, '/')) {
+                    SessionState::clear($telegramId);
+                    self::routeCommand($text, $update, $user, $locale);
+
+                    return;
+                }
+                if ($text === I18nService::t('common.cancel', [], $locale) || $text === '🚫 Bekor qilish' || $text === 'Bekor qilish') {
+                    SessionState::clear($telegramId);
+                    TelegramApi::sendMessage((int) $update->chatId, I18nService::t('common.deleted', [], $locale) ?: 'Bekor qilindi.', StartHandler::mainMenuKeyboard($telegramId, $locale));
+
+                    return;
+                }
+            }
+
+            if ($update->isCallback()) {
+                $cb = (string) $update->callbackData;
+                $isStateCallback = str_starts_with($cb, 'ord:confirm')
+                    || str_starts_with($cb, 'ord:cancel')
+                    || str_starts_with($cb, 'adm:prov:setcur:')
+                    || str_starts_with($cb, 'adm:bcast:go')
+                    || str_starts_with($cb, 'adm:bcast:cancel');
+
+                if (!$isStateCallback) {
+                    SessionState::clear($telegramId);
+                    self::routeCallback($update, $user, $locale);
+
+                    return;
+                }
+            }
+
             self::routeState($state, $update, $user, $locale);
 
             return;
