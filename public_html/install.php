@@ -192,21 +192,28 @@ if (PHP_SAPI !== 'cli') {
     }
 
     if ($action === 'find_best_services') {
-        $keywords = ['obunachi', 'like', 'prasmotr', 'reaksiya', 'stars', 'premium'];
-        foreach ($keywords as $kw) {
-            echo "=== KEYWORD: {$kw} ===\n";
-            $rows = Database::fetchAll(
-                'SELECT s.id, s.provider_id, s.provider_service_id, s.name_uz, s.rate_per_1000, s.price_per_1000, s.min_quantity, s.max_quantity, c.name_uz as cat
-                 FROM services s
-                 JOIN subcategories sub ON sub.id = s.subcategory_id
-                 JOIN categories c ON c.id = sub.category_id
-                 WHERE LOWER(s.name_uz) LIKE :kw OR LOWER(sub.name_uz) LIKE :kw
-                 ORDER BY s.rate_per_1000 ASC
-                 LIMIT 8',
-                ['kw' => "%{$kw}%"]
-            );
-            foreach ($rows as $r) {
-                echo "[P{$r['provider_id']} / S{$r['provider_service_id']}] {$r['cat']} -> {$r['name_uz']} | Narx: {$r['price_per_1000']} so'm (Min: {$r['min_quantity']}, Max: {$r['max_quantity']})\n";
+        $providers = Database::fetchAll('SELECT * FROM providers WHERE is_active = 1');
+        foreach ($providers as $p) {
+            echo "========================================\n";
+            echo "PROVIDER #{$p['id']}: {$p['name']} ({$p['currency']})\n";
+            echo "========================================\n";
+            $client = new \App\Services\ProviderClient((string) $p['api_url'], (string) $p['api_key']);
+            $services = $client->services();
+            echo "Total services: " . count($services) . "\n\n";
+
+            // Group by category
+            $byCat = [];
+            foreach ($services as $s) {
+                $cat = $s['category'] ?? 'Uncategorized';
+                $byCat[$cat][] = $s;
+            }
+
+            foreach ($byCat as $catName => $items) {
+                echo "Category: {$catName} (" . count($items) . " services)\n";
+                // Show sample 3 services
+                foreach (array_slice($items, 0, 3) as $it) {
+                    echo "  -> ID: {$it['service']} | Name: {$it['name']} | Rate: {$it['rate']} | Min: {$it['min']} | Max: {$it['max']}\n";
+                }
             }
             echo "\n";
         }
