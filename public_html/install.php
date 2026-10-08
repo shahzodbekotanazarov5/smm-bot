@@ -149,6 +149,12 @@ if (PHP_SAPI !== 'cli') {
         exit;
     }
 
+    if ($action === 'sample_services') {
+        $samples = Database::fetchAll('SELECT s.id, s.name_uz, s.price_per_1000, s.provider_id, s.provider_service_id, s.backup_provider_id, s.backup_service_id, c.name_uz as category_name, sub.name_uz as subcategory_name FROM services s JOIN subcategories sub ON sub.id = s.subcategory_id JOIN categories c ON c.id = sub.category_id WHERE s.backup_provider_id IS NOT NULL LIMIT 5');
+        echo json_encode($samples, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+        exit;
+    }
+
     if ($action === 'logs') {
         $appLog = dirname(__DIR__) . '/logs/app.log';
         $phpLog = dirname(__DIR__) . '/logs/php_errors.log';
