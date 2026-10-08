@@ -12,6 +12,9 @@ return [
     'common.deleted' => '🗑 Удалено.',
     'common.prev' => '⬅️',
     'common.next' => '➡️',
+    'common.prev_btn' => '⬅️ Назад',
+    'common.next_btn' => 'Вперёд ➡️',
+    'common.currency' => 'сум',
     'common.page' => 'Страница {current}/{total}',
     'common.unknown_input' => '🤔 Не понял. Используйте меню.',
 

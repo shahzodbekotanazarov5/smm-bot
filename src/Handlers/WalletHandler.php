@@ -14,7 +14,7 @@ final class WalletHandler
 {
     public static function showBalance(Update $update, array $user, string $locale): void
     {
-        $currency = (string) AdminService::getSetting('currency_label', "so'm");
+        $currency = I18nService::t('common.currency', [], $locale);
         $adminContact = (string) AdminService::getSetting('admin_contact', '@shahzod_otanazarov');
         if ($adminContact === '' || $adminContact === '@admin') {
             $adminContact = '@shahzod_otanazarov';

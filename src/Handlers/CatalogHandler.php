@@ -106,11 +106,11 @@ final class CatalogHandler
         if ($totalPages > 1) {
             $navRow = [];
             if ($page > 1) {
-                $navRow[] = Keyboard::button('⬅️ Oldingi', "subc:page:{$categoryId}:" . ($page - 1));
+                $navRow[] = Keyboard::button(I18nService::t('common.prev_btn', [], $locale), "subc:page:{$categoryId}:" . ($page - 1));
             }
             $navRow[] = Keyboard::button("📄 {$page}/{$totalPages}", 'noop');
             if ($page < $totalPages) {
-                $navRow[] = Keyboard::button('Keyingi ➡️', "subc:page:{$categoryId}:" . ($page + 1));
+                $navRow[] = Keyboard::button(I18nService::t('common.next_btn', [], $locale), "subc:page:{$categoryId}:" . ($page + 1));
             }
             $buttons[] = $navRow;
         }
@@ -143,7 +143,7 @@ final class CatalogHandler
         $offset = ($page - 1) * $perPage;
         $slice = array_slice($allServices, $offset, $perPage);
 
-        $currency = (string) AdminService::getSetting('currency_label', "so'm");
+        $currency = I18nService::t('common.currency', [], $locale);
         $buttons = [];
         foreach ($slice as $s) {
             $name = CatalogService::localizedName($s, $locale);
@@ -157,11 +157,11 @@ final class CatalogHandler
         if ($totalPages > 1) {
             $navRow = [];
             if ($page > 1) {
-                $navRow[] = Keyboard::button('⬅️ Oldingi', "svc:page:{$subcategoryId}:" . ($page - 1));
+                $navRow[] = Keyboard::button(I18nService::t('common.prev_btn', [], $locale), "svc:page:{$subcategoryId}:" . ($page - 1));
             }
             $navRow[] = Keyboard::button("📄 {$page}/{$totalPages}", 'noop');
             if ($page < $totalPages) {
-                $navRow[] = Keyboard::button('Keyingi ➡️', "svc:page:{$subcategoryId}:" . ($page + 1));
+                $navRow[] = Keyboard::button(I18nService::t('common.next_btn', [], $locale), "svc:page:{$subcategoryId}:" . ($page + 1));
             }
             $buttons[] = $navRow;
         }
@@ -179,13 +179,13 @@ final class CatalogHandler
             return;
         }
 
-        $currency = (string) AdminService::getSetting('currency_label', "so'm");
+        $currency = I18nService::t('common.currency', [], $locale);
         $text = I18nService::t('catalog.service_details', [
             'name' => CatalogService::localizedName($service, $locale),
             'price' => number_format((float) $service['price_per_1000'], 0, '.', ' '),
             'currency' => $currency,
-            'min' => $service['min_quantity'],
-            'max' => $service['max_quantity'],
+            'min' => number_format((float) $service['min_quantity'], 0, '.', ' '),
+            'max' => number_format((float) $service['max_quantity'], 0, '.', ' '),
         ], $locale);
 
         $buttons = [

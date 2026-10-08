@@ -162,9 +162,54 @@ if (PHP_SAPI !== 'cli') {
         exit;
     }
 
+    if ($action === 'curate_catalog') {
+        echo "Curating and simplifying catalog...\n";
+        $start = microtime(true);
+        $res = \App\Services\CatalogCuratorService::curate();
+        $dur = round(microtime(true) - $start, 2);
+        echo "Curated in {$dur}s! " . json_encode($res, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+
+        $activeCats = Database::fetchAll('SELECT id, name_uz, name_ru, name_en FROM categories WHERE is_active = 1 ORDER BY sort_order ASC');
+        echo "\nActive Categories (" . count($activeCats) . "):\n";
+        foreach ($activeCats as $c) {
+            echo "- #{$c['id']}: {$c['name_uz']} | {$c['name_ru']} | {$c['name_en']}\n";
+            $subs = Database::fetchAll('SELECT id, name_uz, name_ru, name_en FROM subcategories WHERE category_id = :cid AND is_active = 1 ORDER BY sort_order ASC', ['cid' => $c['id']]);
+            foreach ($subs as $s) {
+                $svcs = Database::fetchAll('SELECT id, name_uz, price_per_1000, provider_id, backup_provider_id FROM services WHERE subcategory_id = :sid AND is_active = 1 ORDER BY sort_order ASC', ['sid' => $s['id']]);
+                echo "   * {$s['name_uz']} | {$s['name_ru']} | {$s['name_en']} (" . count($svcs) . " services):\n";
+                foreach ($svcs as $v) {
+                    echo "       • {$v['name_uz']} — {$v['price_per_1000']} so'm [P{$v['provider_id']} / Backup: P{$v['backup_provider_id']}]\n";
+                }
+            }
+        }
+        exit;
+    }
+
     if ($action === 'sample_services') {
         $samples = Database::fetchAll('SELECT s.id, s.name_uz, s.price_per_1000, s.provider_id, s.provider_service_id, s.backup_provider_id, s.backup_service_id, c.name_uz as category_name, sub.name_uz as subcategory_name FROM services s JOIN subcategories sub ON sub.id = s.subcategory_id JOIN categories c ON c.id = sub.category_id WHERE s.backup_provider_id IS NOT NULL LIMIT 5');
         echo json_encode($samples, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+        exit;
+    }
+
+    if ($action === 'find_best_services') {
+        $keywords = ['obunachi', 'like', 'prasmotr', 'reaksiya', 'stars', 'premium'];
+        foreach ($keywords as $kw) {
+            echo "=== KEYWORD: {$kw} ===\n";
+            $rows = Database::fetchAll(
+                'SELECT s.id, s.provider_id, s.provider_service_id, s.name_uz, s.rate_per_1000, s.price_per_1000, s.min_quantity, s.max_quantity, c.name_uz as cat
+                 FROM services s
+                 JOIN subcategories sub ON sub.id = s.subcategory_id
+                 JOIN categories c ON c.id = sub.category_id
+                 WHERE LOWER(s.name_uz) LIKE :kw OR LOWER(sub.name_uz) LIKE :kw
+                 ORDER BY s.rate_per_1000 ASC
+                 LIMIT 8',
+                ['kw' => "%{$kw}%"]
+            );
+            foreach ($rows as $r) {
+                echo "[P{$r['provider_id']} / S{$r['provider_service_id']}] {$r['cat']} -> {$r['name_uz']} | Narx: {$r['price_per_1000']} so'm (Min: {$r['min_quantity']}, Max: {$r['max_quantity']})\n";
+            }
+            echo "\n";
+        }
         exit;
     }
 
@@ -189,7 +234,7 @@ if (PHP_SAPI !== 'cli') {
     }
 
     if ($action === 'debug_tg') {
-        echo "BUILD: v4-fix-matched\n";
+        echo "BUILD: v5-curate-catalog\n";
         $token = Config::get('bot.token');
         echo "Token prefix: " . substr((string) $token, 0, 10) . "...\n";
         $getMe = \App\Core\Http::get("https://api.telegram.org/bot{$token}/getMe");

@@ -12,6 +12,9 @@ return [
     'common.deleted' => '🗑 Deleted.',
     'common.prev' => '⬅️',
     'common.next' => '➡️',
+    'common.prev_btn' => '⬅️ Previous',
+    'common.next_btn' => 'Next ➡️',
+    'common.currency' => 'UZS',
     'common.page' => 'Page {current}/{total}',
     'common.unknown_input' => '🤔 I didn\'t understand that. Please use the menu.',
 

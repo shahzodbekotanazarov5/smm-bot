@@ -176,7 +176,7 @@ final class OrderHandler
     {
         $quantity = (int) $payload['quantity'];
         $price = OrderService::calculatePrice($service, $quantity);
-        $currency = (string) AdminService::getSetting('currency_label', "so'm");
+        $currency = I18nService::t('common.currency', [], $locale);
         $nonce = bin2hex(random_bytes(8));
         $payload['nonce'] = $nonce;
 
@@ -214,7 +214,7 @@ final class OrderHandler
         SessionState::clear($telegramId);
         TelegramApi::answerCallbackQuery((string) $update->callbackQueryId);
 
-        $currency = (string) AdminService::getSetting('currency_label', "so'm");
+        $currency = I18nService::t('common.currency', [], $locale);
 
         try {
             $order = OrderService::placeOrder(
@@ -263,7 +263,7 @@ final class OrderHandler
             return;
         }
 
-        $currency = (string) AdminService::getSetting('currency_label', "so'm");
+        $currency = I18nService::t('common.currency', [], $locale);
         $lines = [I18nService::t('order.history_title', [], $locale)];
 
         foreach ($result['rows'] as $order) {

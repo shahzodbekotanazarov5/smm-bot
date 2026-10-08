@@ -12,6 +12,9 @@ return [
     'common.deleted' => '🗑 O\'chirildi.',
     'common.prev' => '⬅️',
     'common.next' => '➡️',
+    'common.prev_btn' => '⬅️ Oldingi',
+    'common.next_btn' => 'Keyingi ➡️',
+    'common.currency' => 'so\'m',
     'common.page' => '{current}/{total}-sahifa',
     'common.unknown_input' => '🤔 Tushunmadim. Menyudan foydalaning.',
 
