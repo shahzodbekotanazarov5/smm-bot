@@ -18,6 +18,9 @@ final class I18nService
 
         $text = $strings[$key] ?? self::load((string) Config::get('default_locale', 'uz'))[$key] ?? $key;
 
+        // Ensure literal \n and \r\n escape sequences are always converted to real newlines
+        $text = str_replace(["\\r\\n", "\\n", "\\r"], "\n", $text);
+
         foreach ($vars as $name => $value) {
             $val = is_scalar($value) || $value === null ? (string) $value : (string) json_encode($value, JSON_UNESCAPED_UNICODE);
             $escaped = htmlspecialchars($val, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

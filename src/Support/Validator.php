@@ -24,14 +24,29 @@ final class Validator
         $input = trim($input);
 
         if ($linkType === 'username') {
+            if (preg_match('#(?:https?://)?(?:t\.me|telegram\.me)/([A-Za-z0-9_]{3,32})#i', $input, $matches)) {
+                return '@' . $matches[1];
+            }
+            if (preg_match('#(?:https?://)?(?:www\.)?instagram\.com/([A-Za-z0-9_.]+)/?#i', $input, $matches)) {
+                return '@' . rtrim($matches[1], '/');
+            }
             $clean = ltrim($input, '@');
 
             return preg_match('/^[A-Za-z0-9_]{3,32}$/', $clean) === 1 ? ('@' . $clean) : false;
         }
 
-        $url = filter_var($input, FILTER_VALIDATE_URL);
+        if (filter_var($input, FILTER_VALIDATE_URL) !== false) {
+            return $input;
+        }
 
-        return $url !== false ? $url : false;
+        if (!preg_match('#^[a-zA-Z]+://#', $input)) {
+            $withScheme = 'https://' . $input;
+            if (filter_var($withScheme, FILTER_VALIDATE_URL) !== false) {
+                return $withScheme;
+            }
+        }
+
+        return false;
     }
 
     public static function pollAnswer(mixed $input): int|false

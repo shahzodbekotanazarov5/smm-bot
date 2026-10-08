@@ -183,14 +183,18 @@ $defaultSettings = [
     'currency_label' => ["so'm", 'string'],
     'bot_enabled' => [true, 'bool'],
     'antiflood_seconds' => ['2', 'int'],
-    'admin_contact' => ['@admin', 'string'],
+    'admin_contact' => ['@shahzod_otanazarov', 'string'],
     'support_group_chat_id' => ['', 'string'],
 ];
 
 foreach ($defaultSettings as $key => [$value, $type]) {
-    if (Database::fetchOne('SELECT `key` FROM settings WHERE `key` = :k', ['k' => $key]) === null) {
+    $existing = Database::fetchOne('SELECT `value` FROM settings WHERE `key` = :k', ['k' => $key]);
+    if ($existing === null) {
         AdminService::setSetting($key, $value, $type);
         echo "Setting seeded: {$key}\n";
+    } elseif ($key === 'admin_contact' && ($existing['value'] === '@admin' || empty($existing['value']))) {
+        AdminService::setSetting($key, '@shahzod_otanazarov', 'string');
+        echo "Setting updated: admin_contact -> @shahzod_otanazarov\n";
     }
 }
 

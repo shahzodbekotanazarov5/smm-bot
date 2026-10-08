@@ -76,17 +76,26 @@ final class StartHandler
         $allJoined = true;
 
         foreach ($channels as $channel) {
-            $member = TelegramApi::getChatMember($channel['chat_id'], $telegramId);
-            $status = $member['status'] ?? null;
+            $rawChatId = trim((string) $channel['chat_id']);
+            $checkTarget = $rawChatId;
+            if (preg_match('#(?:https?://)?(?:t\.me|telegram\.me)/([A-Za-z0-9_]{4,})#i', $rawChatId, $m)) {
+                $checkTarget = '@' . $m[1];
+            } elseif (!str_starts_with($rawChatId, '@') && !str_starts_with($rawChatId, '-') && preg_match('/^[A-Za-z0-9_]{4,}$/', $rawChatId)) {
+                $checkTarget = '@' . $rawChatId;
+            }
+
+            $member = TelegramApi::getChatMember($checkTarget, $telegramId);
+            $status = is_array($member) ? ($member['status'] ?? null) : null;
             $joined = in_array($status, ['creator', 'administrator', 'member'], true);
 
             if (!$joined) {
                 $allJoined = false;
             }
 
-            $label = ($joined ? '✅ ' : '❌ ') . ($channel['title'] ?: $channel['chat_id']);
-            $username = ltrim((string) $channel['chat_id'], '@');
-            $buttons[] = [Keyboard::urlButton($label, "https://t.me/{$username}")];
+            $title = !empty($channel['title']) ? $channel['title'] : $checkTarget;
+            $label = ($joined ? '✅ ' : '❌ ') . $title;
+            $url = self::formatChannelUrl($rawChatId, $channel['invite_link'] ?? null);
+            $buttons[] = [Keyboard::urlButton($label, $url)];
         }
 
         if ($allJoined) {
@@ -103,5 +112,35 @@ final class StartHandler
         }
 
         return false;
+    }
+
+    public static function formatChannelUrl(string $chatId, ?string $inviteLink = null): string
+    {
+        if ($inviteLink !== null && trim($inviteLink) !== '') {
+            $clean = trim($inviteLink);
+            if (str_starts_with($clean, 'http://') || str_starts_with($clean, 'https://')) {
+                return $clean;
+            }
+            if (str_starts_with($clean, 't.me/')) {
+                return 'https://' . $clean;
+            }
+            return 'https://t.me/' . ltrim($clean, '@');
+        }
+
+        $chatId = trim($chatId);
+        if (str_starts_with($chatId, 'http://') || str_starts_with($chatId, 'https://')) {
+            return $chatId;
+        }
+        if (str_starts_with($chatId, 't.me/')) {
+            return 'https://' . $chatId;
+        }
+        if (str_starts_with($chatId, '@')) {
+            return 'https://t.me/' . substr($chatId, 1);
+        }
+        if (str_starts_with($chatId, '-')) {
+            return 'https://t.me';
+        }
+
+        return 'https://t.me/' . $chatId;
     }
 }

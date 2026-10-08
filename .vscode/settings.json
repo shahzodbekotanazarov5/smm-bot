@@ -1,0 +1,7 @@
+{
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 500,
+  "editor.tabSize": 4,
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "editor.formatOnSave": true
+}

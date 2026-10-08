@@ -71,7 +71,7 @@ final class TelegramApi
         return $response['body']['result'] ?? true;
     }
 
-    public static function sendMessage(int|string $chatId, string $text, ?array $replyMarkup = null, string $parseMode = 'HTML'): ?array
+    public static function sendMessage(int|string $chatId, string $text, ?array $replyMarkup = null, string $parseMode = 'HTML'): mixed
     {
         return self::call('sendMessage', [
             'chat_id' => $chatId,
@@ -82,7 +82,7 @@ final class TelegramApi
         ]);
     }
 
-    public static function sendPhoto(int|string $chatId, string $photo, string $caption = '', ?array $replyMarkup = null): ?array
+    public static function sendPhoto(int|string $chatId, string $photo, string $caption = '', ?array $replyMarkup = null): mixed
     {
         return self::call('sendPhoto', [
             'chat_id' => $chatId,
@@ -93,7 +93,7 @@ final class TelegramApi
         ]);
     }
 
-    public static function editMessageText(int|string $chatId, int $messageId, string $text, ?array $replyMarkup = null, string $parseMode = 'HTML'): ?array
+    public static function editMessageText(int|string $chatId, int $messageId, string $text, ?array $replyMarkup = null, string $parseMode = 'HTML'): mixed
     {
         return self::call('editMessageText', [
             'chat_id' => $chatId,
@@ -105,7 +105,7 @@ final class TelegramApi
         ]);
     }
 
-    public static function answerCallbackQuery(string $callbackQueryId, string $text = '', bool $showAlert = false): ?array
+    public static function answerCallbackQuery(string $callbackQueryId, string $text = '', bool $showAlert = false): mixed
     {
         return self::call('answerCallbackQuery', [
             'callback_query_id' => $callbackQueryId,
@@ -114,7 +114,7 @@ final class TelegramApi
         ]);
     }
 
-    public static function deleteMessage(int|string $chatId, int $messageId): ?array
+    public static function deleteMessage(int|string $chatId, int $messageId): mixed
     {
         return self::call('deleteMessage', [
             'chat_id' => $chatId,
@@ -122,7 +122,7 @@ final class TelegramApi
         ]);
     }
 
-    public static function getChatMember(int|string $chatId, int $userId): ?array
+    public static function getChatMember(int|string $chatId, int|string $userId): mixed
     {
         return self::call('getChatMember', [
             'chat_id' => $chatId,
@@ -130,7 +130,7 @@ final class TelegramApi
         ]);
     }
 
-    public static function getChat(int|string $chatId): ?array
+    public static function getChat(int|string $chatId): mixed
     {
         return self::call('getChat', ['chat_id' => $chatId]);
     }
