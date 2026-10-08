@@ -63,6 +63,12 @@ if (PHP_SAPI !== 'cli') {
         $cats = Database::fetchAll('SELECT id, name_uz, is_active FROM categories');
         echo "Categories (" . count($cats) . "):\n" . json_encode($cats, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
 
+        $subcatsCount = Database::fetchOne('SELECT COUNT(*) as cnt FROM subcategories');
+        echo "Subcategories count: " . ($subcatsCount['cnt'] ?? 0) . "\n";
+
+        $servicesCount = Database::fetchOne('SELECT COUNT(*) as cnt FROM services');
+        echo "Services count: " . ($servicesCount['cnt'] ?? 0) . "\n\n";
+
         $settings = Database::fetchAll('SELECT * FROM settings');
         echo "Settings (" . count($settings) . "):\n" . json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
 
@@ -78,6 +84,27 @@ if (PHP_SAPI !== 'cli') {
     if ($action === 'clear_channels') {
         Database::execute('DELETE FROM channels');
         echo "All channels deleted successfully from mandatory subscriptions.\n";
+        exit;
+    }
+
+    if ($action === 'test_providers') {
+        $providers = Database::fetchAll('SELECT * FROM providers WHERE is_active = 1');
+        foreach ($providers as $p) {
+            echo "Testing Provider #{$p['id']}: {$p['name']} ({$p['api_url']})...\n";
+            $start = microtime(true);
+            try {
+                $client = new \App\Services\ProviderClient((string) $p['api_url'], (string) $p['api_key']);
+                $services = $client->services();
+                $duration = round(microtime(true) - $start, 2);
+                echo "Success! Returned " . count($services) . " services in {$duration}s.\n";
+                if (!empty($services)) {
+                    echo "Sample service 1: " . json_encode($services[0], JSON_UNESCAPED_UNICODE) . "\n";
+                }
+            } catch (\Throwable $e) {
+                echo "Failed in " . round(microtime(true) - $start, 2) . "s: " . $e->getMessage() . "\n";
+            }
+            echo "\n";
+        }
         exit;
     }
 

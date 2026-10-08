@@ -32,11 +32,11 @@ final class ProviderSyncService
     }
 
     /**
-     * Import or synchronize services from a provider.
+     * Import or synchronize services from a provider with in-memory caching for high speed.
      *
      * @return array{total: int, created: int, updated: int}
      */
-    public static function syncServicesFromProvider(int $providerId): array
+    public static function syncServicesFromProvider(int $providerId, int $limit = 0): array
     {
         $provider = Database::fetchOne('SELECT * FROM providers WHERE id = :id', ['id' => $providerId]);
         if ($provider === null) {
@@ -48,6 +48,71 @@ final class ProviderSyncService
         $providerCurrency = strtoupper((string) ($provider['currency'] ?? 'USD'));
 
         $rawServices = self::fetchServices($providerId);
+        if ($limit > 0 && count($rawServices) > $limit) {
+            $rawServices = array_slice($rawServices, 0, $limit);
+        }
+
+        // 1. In-memory cache for categories
+        $catRows = Database::fetchAll('SELECT id, name_uz FROM categories');
+        $categoriesMap = [];
+        foreach ($catRows as $c) {
+            $categoriesMap[mb_strtolower((string) $c['name_uz'])] = (int) $c['id'];
+        }
+
+        // 2. In-memory cache for subcategories
+        $subRows = Database::fetchAll('SELECT id, category_id, name_uz FROM subcategories');
+        $subcategoriesMap = [];
+        foreach ($subRows as $s) {
+            $key = $s['category_id'] . '_' . mb_strtolower((string) $s['name_uz']);
+            $subcategoriesMap[$key] = (int) $s['id'];
+        }
+
+        // 3. In-memory cache for existing services belonging to this provider
+        $existingRows = Database::fetchAll(
+            'SELECT id, provider_service_id FROM services WHERE provider_id = :pid',
+            ['pid' => $providerId]
+        );
+        $existingServicesMap = [];
+        foreach ($existingRows as $er) {
+            $existingServicesMap[(string) $er['provider_service_id']] = (int) $er['id'];
+        }
+
+        $pdo = Database::connection();
+        $updateStmt = $pdo->prepare(
+            'UPDATE services SET
+                subcategory_id = :sub_id,
+                name_uz = :name_uz,
+                name_ru = :name_ru,
+                name_en = :name_en,
+                rate_per_1000 = :rate,
+                price_per_1000 = :price,
+                min_quantity = :min,
+                max_quantity = :max,
+                order_type = :order_type,
+                link_type = :link_type,
+                is_active = 1,
+                updated_at = NOW()
+             WHERE id = :id'
+        );
+
+        $insertStmt = $pdo->prepare(
+            'INSERT INTO services (
+                subcategory_id, provider_id, provider_service_id,
+                name_uz, name_ru, name_en,
+                order_type, link_type,
+                rate_per_1000, price_per_1000,
+                min_quantity, max_quantity,
+                auto_sync_price, is_active
+            ) VALUES (
+                :sub_id, :pid, :psid,
+                :name_uz, :name_ru, :name_en,
+                :order_type, :link_type,
+                :rate, :price,
+                :min, :max,
+                1, 1
+            )'
+        );
+
         $created = 0;
         $updated = 0;
 
@@ -61,14 +126,14 @@ final class ProviderSyncService
             $catName = trim((string) ($s['category'] ?? 'General'));
             $rate = (float) ($s['rate'] ?? 0);
             $min = max(1, (int) ($s['min'] ?? 1));
-            $max = max($min, (int) ($s['max'] ?? 1000));
+            $max = max($min, (int) ($s['max'] ?? 1000000));
             $type = strtolower((string) ($s['type'] ?? 'default'));
 
             if ($providerServiceId === '' || $name === '') {
                 continue;
             }
 
-            // Determine selling price in UZS
+            // Selling price with markup in UZS
             $multiplier = 1 + ($markupPercent / 100.0);
             if ($providerCurrency === 'USD') {
                 $pricePer1000 = round($rate * $usdRate * $multiplier, 2);
@@ -76,88 +141,53 @@ final class ProviderSyncService
                 $pricePer1000 = round($rate * $multiplier, 2);
             }
 
-            // Determine Main Category (Platform) and Subcategory
+            // Platform and subcategory detection
             [$mainPlatform, $subName] = self::detectPlatformAndSubcategory($catName, $name);
 
-            $categoryId = self::getOrCreateCategory($mainPlatform);
-            $subcategoryId = self::getOrCreateSubcategory($categoryId, $subName);
+            $categoryId = self::getOrCreateCategoryCached($mainPlatform, $categoriesMap);
+            $subcategoryId = self::getOrCreateSubcategoryCached($categoryId, $subName, $subcategoriesMap);
 
-            $orderType = str_contains($type, 'poll') || str_contains(strtolower($name), 'poll') ? 'poll' : 'default';
-            $linkType = str_contains(strtolower($name), 'username') || str_contains(strtolower($catName), 'username') ? 'username' : 'url';
+            $orderType = (str_contains($type, 'poll') || str_contains(strtolower($name), 'poll')) ? 'poll' : 'default';
+            $linkType = (str_contains(strtolower($name), 'username') || str_contains(strtolower($catName), 'username')) ? 'username' : 'url';
 
-            $existing = Database::fetchOne(
-                'SELECT id FROM services WHERE provider_id = :pid AND provider_service_id = :psid',
-                ['pid' => $providerId, 'psid' => $providerServiceId]
-            );
-
-            if ($existing !== null) {
-                Database::execute(
-                    'UPDATE services SET
-                        subcategory_id = :sub_id,
-                        name_uz = :name_uz,
-                        name_ru = :name_ru,
-                        name_en = :name_en,
-                        rate_per_1000 = :rate,
-                        price_per_1000 = :price,
-                        min_quantity = :min,
-                        max_quantity = :max,
-                        order_type = :order_type,
-                        link_type = :link_type,
-                        is_active = 1,
-                        updated_at = NOW()
-                     WHERE id = :id',
-                    [
-                        'sub_id' => $subcategoryId,
-                        'name_uz' => $name,
-                        'name_ru' => $name,
-                        'name_en' => $name,
-                        'rate' => $rate,
-                        'price' => $pricePer1000,
-                        'min' => $min,
-                        'max' => $max,
-                        'order_type' => $orderType,
-                        'link_type' => $linkType,
-                        'id' => $existing['id'],
-                    ]
-                );
+            if (isset($existingServicesMap[$providerServiceId])) {
+                $existingId = $existingServicesMap[$providerServiceId];
+                $updateStmt->execute([
+                    ':sub_id' => $subcategoryId,
+                    ':name_uz' => $name,
+                    ':name_ru' => $name,
+                    ':name_en' => $name,
+                    ':rate' => $rate,
+                    ':price' => $pricePer1000,
+                    ':min' => $min,
+                    ':max' => $max,
+                    ':order_type' => $orderType,
+                    ':link_type' => $linkType,
+                    ':id' => $existingId,
+                ]);
                 $updated++;
             } else {
-                Database::execute(
-                    'INSERT INTO services (
-                        subcategory_id, provider_id, provider_service_id,
-                        name_uz, name_ru, name_en,
-                        order_type, link_type,
-                        rate_per_1000, price_per_1000,
-                        min_quantity, max_quantity,
-                        auto_sync_price, is_active
-                    ) VALUES (
-                        :sub_id, :pid, :psid,
-                        :name_uz, :name_ru, :name_en,
-                        :order_type, :link_type,
-                        :rate, :price,
-                        :min, :max,
-                        1, 1
-                    )',
-                    [
-                        'sub_id' => $subcategoryId,
-                        'pid' => $providerId,
-                        'psid' => $providerServiceId,
-                        'name_uz' => $name,
-                        'name_ru' => $name,
-                        'name_en' => $name,
-                        'order_type' => $orderType,
-                        'link_type' => $linkType,
-                        'rate' => $rate,
-                        'price' => $pricePer1000,
-                        'min' => $min,
-                        'max' => $max,
-                    ]
-                );
+                $insertStmt->execute([
+                    ':sub_id' => $subcategoryId,
+                    ':pid' => $providerId,
+                    ':psid' => $providerServiceId,
+                    ':name_uz' => $name,
+                    ':name_ru' => $name,
+                    ':name_en' => $name,
+                    ':order_type' => $orderType,
+                    ':link_type' => $linkType,
+                    ':rate' => $rate,
+                    ':price' => $pricePer1000,
+                    ':min' => $min,
+                    ':max' => $max,
+                ]);
+                $newId = (int) $pdo->lastInsertId();
+                $existingServicesMap[$providerServiceId] = $newId;
                 $created++;
             }
         }
 
-        // Automatically match backup failover services with other providers
+        // Run automatic backup matching after sync
         self::autoMatchBackups();
 
         return [
@@ -179,40 +209,70 @@ final class ProviderSyncService
             return 0; // Need at least 2 active providers for failover
         }
 
-        $allServices = Database::fetchAll('SELECT s.*, sub.category_id FROM services s JOIN subcategories sub ON sub.id = s.subcategory_id WHERE s.is_active = 1');
+        $allServices = Database::fetchAll(
+            'SELECT s.id, s.provider_id, s.provider_service_id, s.subcategory_id, s.backup_provider_id, sub.category_id
+             FROM services s
+             JOIN subcategories sub ON sub.id = s.subcategory_id
+             WHERE s.is_active = 1'
+        );
+
+        // Group services in memory by category and subcategory
+        $bySubcategory = [];
+        $byCategory = [];
+
+        foreach ($allServices as $svc) {
+            $pid = (int) $svc['provider_id'];
+            $subId = (int) $svc['subcategory_id'];
+            $catId = (int) $svc['category_id'];
+
+            $bySubcategory[$subId][$pid][] = $svc;
+            $byCategory[$catId][$pid][] = $svc;
+        }
+
+        $pdo = Database::connection();
+        $updateStmt = $pdo->prepare(
+            'UPDATE services SET backup_provider_id = :bpid, backup_service_id = :bsid WHERE id = :id'
+        );
+
         $matchedCount = 0;
 
         foreach ($allServices as $svc) {
-            if (!empty($svc['backup_provider_id']) && !empty($svc['backup_service_id'])) {
-                continue; // Already has a backup configured
+            if (!empty($svc['backup_provider_id'])) {
+                continue; // Already has a backup
             }
 
-            // Look for a similar service from another provider
-            $candidate = Database::fetchOne(
-                'SELECT s.provider_id, s.provider_service_id
-                 FROM services s
-                 JOIN subcategories sub ON sub.id = s.subcategory_id
-                 WHERE s.provider_id != :current_pid
-                   AND s.is_active = 1
-                   AND sub.category_id = :cat_id
-                 ORDER BY (s.subcategory_id = :sub_id) DESC, s.id ASC
-                 LIMIT 1',
-                [
-                    'current_pid' => $svc['provider_id'],
-                    'cat_id' => $svc['category_id'],
-                    'sub_id' => $svc['subcategory_id'],
-                ]
-            );
+            $currentPid = (int) $svc['provider_id'];
+            $subId = (int) $svc['subcategory_id'];
+            $catId = (int) $svc['category_id'];
+
+            $candidate = null;
+
+            // 1. Look in same subcategory from an alternative provider
+            if (isset($bySubcategory[$subId])) {
+                foreach ($bySubcategory[$subId] as $otherPid => $servicesList) {
+                    if ($otherPid !== $currentPid && !empty($servicesList)) {
+                        $candidate = $servicesList[0];
+                        break;
+                    }
+                }
+            }
+
+            // 2. If not found in subcategory, look in same main platform category
+            if ($candidate === null && isset($byCategory[$catId])) {
+                foreach ($byCategory[$catId] as $otherPid => $servicesList) {
+                    if ($otherPid !== $currentPid && !empty($servicesList)) {
+                        $candidate = $servicesList[0];
+                        break;
+                    }
+                }
+            }
 
             if ($candidate !== null) {
-                Database::execute(
-                    'UPDATE services SET backup_provider_id = :bpid, backup_service_id = :bsid WHERE id = :id',
-                    [
-                        'bpid' => $candidate['provider_id'],
-                        'bsid' => $candidate['provider_service_id'],
-                        'id' => $svc['id'],
-                    ]
-                );
+                $updateStmt->execute([
+                    ':bpid' => $candidate['provider_id'],
+                    ':bsid' => $candidate['provider_service_id'],
+                    ':id' => $svc['id'],
+                ]);
                 $matchedCount++;
             }
         }
@@ -227,7 +287,7 @@ final class ProviderSyncService
      */
     private static function detectPlatformAndSubcategory(string $catName, string $serviceName): array
     {
-        $haystack = strtolower($catName . ' ' . $serviceName);
+        $haystack = mb_strtolower($catName . ' ' . $serviceName);
 
         $platforms = [
             'instagram' => 'Instagram',
@@ -254,19 +314,22 @@ final class ProviderSyncService
         }
 
         // Subcategory name is the provider category (cleaned up)
-        $sub = $catName;
-        if (trim($sub) === '' || $sub === 'General') {
+        $sub = trim($catName);
+        if ($sub === '' || $sub === 'General') {
             $sub = $platform . ' Xizmatlari';
         }
 
         return [$platform, $sub];
     }
 
-    private static function getOrCreateCategory(string $name): int
+    /**
+     * @param array<string, int> $categoriesMap
+     */
+    private static function getOrCreateCategoryCached(string $name, array &$categoriesMap): int
     {
-        $existing = Database::fetchOne('SELECT id FROM categories WHERE name_uz = :name LIMIT 1', ['name' => $name]);
-        if ($existing !== null) {
-            return (int) $existing['id'];
+        $key = mb_strtolower($name);
+        if (isset($categoriesMap[$key])) {
+            return $categoriesMap[$key];
         }
 
         Database::execute(
@@ -274,17 +337,20 @@ final class ProviderSyncService
             ['u' => $name, 'r' => $name, 'e' => $name]
         );
 
-        return (int) Database::lastInsertId();
+        $id = (int) Database::lastInsertId();
+        $categoriesMap[$key] = $id;
+
+        return $id;
     }
 
-    private static function getOrCreateSubcategory(int $categoryId, string $name): int
+    /**
+     * @param array<string, int> $subcategoriesMap
+     */
+    private static function getOrCreateSubcategoryCached(int $categoryId, string $name, array &$subcategoriesMap): int
     {
-        $existing = Database::fetchOne(
-            'SELECT id FROM subcategories WHERE category_id = :cid AND name_uz = :name LIMIT 1',
-            ['cid' => $categoryId, 'name' => $name]
-        );
-        if ($existing !== null) {
-            return (int) $existing['id'];
+        $key = $categoryId . '_' . mb_strtolower($name);
+        if (isset($subcategoriesMap[$key])) {
+            return $subcategoriesMap[$key];
         }
 
         Database::execute(
@@ -292,6 +358,9 @@ final class ProviderSyncService
             ['cid' => $categoryId, 'u' => $name, 'r' => $name, 'e' => $name]
         );
 
-        return (int) Database::lastInsertId();
+        $id = (int) Database::lastInsertId();
+        $subcategoriesMap[$key] = $id;
+
+        return $id;
     }
 }
