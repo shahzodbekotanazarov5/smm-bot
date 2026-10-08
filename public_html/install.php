@@ -109,18 +109,30 @@ if (PHP_SAPI !== 'cli') {
     }
 
     if ($action === 'sync_all_providers') {
+        Database::execute("UPDATE providers SET currency = 'UZS' WHERE id = 40144");
         $providers = Database::fetchAll('SELECT id, name FROM providers WHERE is_active = 1');
         foreach ($providers as $p) {
             echo "Syncing provider #{$p['id']}: {$p['name']}...\n";
+            $start = microtime(true);
             try {
                 $res = \App\Services\ProviderSyncService::syncServicesFromProvider((int) $p['id']);
-                echo "Result: " . json_encode($res, JSON_UNESCAPED_UNICODE) . "\n";
+                $duration = round(microtime(true) - $start, 2);
+                echo "Result in {$duration}s: " . json_encode($res, JSON_UNESCAPED_UNICODE) . "\n";
             } catch (\Throwable $e) {
                 echo "Failed: " . $e->getMessage() . "\n";
             }
         }
+        $startMatch = microtime(true);
         $matched = \App\Services\ProviderSyncService::autoMatchBackups();
-        echo "Auto-matched failover backups: {$matched}\n";
+        $matchDuration = round(microtime(true) - $startMatch, 2);
+        echo "Auto-matched failover backups in {$matchDuration}s: {$matched}\n";
+
+        $totalServices = Database::fetchOne('SELECT COUNT(*) as cnt FROM services');
+        $totalSubcats = Database::fetchOne('SELECT COUNT(*) as cnt FROM subcategories');
+        $totalWithBackup = Database::fetchOne('SELECT COUNT(*) as cnt FROM services WHERE backup_provider_id IS NOT NULL');
+        echo "Total active services: " . ($totalServices['cnt'] ?? 0) . "\n";
+        echo "Total subcategories: " . ($totalSubcats['cnt'] ?? 0) . "\n";
+        echo "Total services with failover backup: " . ($totalWithBackup['cnt'] ?? 0) . "\n";
         exit;
     }
 

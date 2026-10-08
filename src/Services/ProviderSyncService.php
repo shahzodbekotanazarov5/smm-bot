@@ -135,7 +135,7 @@ final class ProviderSyncService
 
             // Selling price with markup in UZS
             $multiplier = 1 + ($markupPercent / 100.0);
-            if ($providerCurrency === 'USD') {
+            if ($providerCurrency === 'USD' && $rate < 200) {
                 $pricePer1000 = round($rate * $usdRate * $multiplier, 2);
             } else {
                 $pricePer1000 = round($rate * $multiplier, 2);

@@ -44,12 +44,16 @@ final class CatalogHandler
         } elseif ($domain === 'subc') {
             if (($parts[1] ?? '') === 'back') {
                 self::showSubcategories((int) $parts[2], $update, $locale, true);
+            } elseif (($parts[1] ?? '') === 'page') {
+                self::showSubcategories((int) $parts[2], $update, $locale, true, (int) ($parts[3] ?? 1));
             } else {
                 self::showServices((int) $parts[1], $update, $locale);
             }
         } elseif ($domain === 'svc') {
             if (($parts[1] ?? '') === 'back') {
                 self::showServices((int) $parts[2], $update, $locale, true);
+            } elseif (($parts[1] ?? '') === 'page') {
+                self::showServices((int) $parts[2], $update, $locale, true, (int) ($parts[3] ?? 1));
             } else {
                 self::showServiceDetail((int) $parts[1], $update, $locale);
             }
@@ -76,7 +80,7 @@ final class CatalogHandler
         self::render($update, I18nService::t('catalog.choose_category', [], $locale), Keyboard::inline($buttons), true);
     }
 
-    private static function showSubcategories(int $categoryId, Update $update, string $locale, bool $edit = false): void
+    private static function showSubcategories(int $categoryId, Update $update, string $locale, bool $edit = false, int $page = 1): void
     {
         $category = CatalogService::findCategory($categoryId);
         $subs = CatalogService::activeSubcategories($categoryId);
@@ -87,16 +91,36 @@ final class CatalogHandler
             return;
         }
 
+        $perPage = 10;
+        $total = count($subs);
+        $totalPages = (int) ceil($total / $perPage);
+        $page = max(1, min($page, $totalPages));
+        $offset = ($page - 1) * $perPage;
+        $slice = array_slice($subs, $offset, $perPage);
+
         $buttons = array_map(
             fn (array $s) => [Keyboard::button(CatalogService::localizedName($s, $locale), "subc:{$s['id']}")],
-            $subs
+            $slice
         );
+
+        if ($totalPages > 1) {
+            $navRow = [];
+            if ($page > 1) {
+                $navRow[] = Keyboard::button('⬅️ Oldingi', "subc:page:{$categoryId}:" . ($page - 1));
+            }
+            $navRow[] = Keyboard::button("📄 {$page}/{$totalPages}", 'noop');
+            if ($page < $totalPages) {
+                $navRow[] = Keyboard::button('Keyingi ➡️', "subc:page:{$categoryId}:" . ($page + 1));
+            }
+            $buttons[] = $navRow;
+        }
+
         $buttons[] = [Keyboard::button(I18nService::t('common.back', [], $locale), 'cat:root')];
 
         self::render($update, I18nService::t('catalog.choose_subcategory', [], $locale), Keyboard::inline($buttons), $edit);
     }
 
-    private static function showServices(int $subcategoryId, Update $update, string $locale, bool $edit = false): void
+    private static function showServices(int $subcategoryId, Update $update, string $locale, bool $edit = false, int $page = 1): void
     {
         $sub = CatalogService::findSubcategory($subcategoryId);
 
@@ -104,22 +128,44 @@ final class CatalogHandler
             return;
         }
 
-        $services = CatalogService::activeServices($subcategoryId);
+        $allServices = CatalogService::activeServices($subcategoryId);
 
-        if ($services === []) {
+        if ($allServices === []) {
             TelegramApi::answerCallbackQuery((string) $update->callbackQueryId, I18nService::t('catalog.empty', [], $locale), true);
 
             return;
         }
 
+        $perPage = 8;
+        $total = count($allServices);
+        $totalPages = (int) ceil($total / $perPage);
+        $page = max(1, min($page, $totalPages));
+        $offset = ($page - 1) * $perPage;
+        $slice = array_slice($allServices, $offset, $perPage);
+
         $currency = (string) AdminService::getSetting('currency_label', "so'm");
-        $buttons = array_map(
-            fn (array $s) => [Keyboard::button(
-                CatalogService::localizedName($s, $locale) . ' — ' . number_format((float) $s['price_per_1000'], 0, '.', ' ') . ' ' . $currency,
-                "svc:{$s['id']}"
-            )],
-            $services
-        );
+        $buttons = [];
+        foreach ($slice as $s) {
+            $name = CatalogService::localizedName($s, $locale);
+            if (mb_strlen($name) > 36) {
+                $name = mb_substr($name, 0, 33) . '...';
+            }
+            $priceText = number_format((float) $s['price_per_1000'], 0, '.', ' ') . ' ' . $currency;
+            $buttons[] = [Keyboard::button("{$name} — {$priceText}", "svc:{$s['id']}")];
+        }
+
+        if ($totalPages > 1) {
+            $navRow = [];
+            if ($page > 1) {
+                $navRow[] = Keyboard::button('⬅️ Oldingi', "svc:page:{$subcategoryId}:" . ($page - 1));
+            }
+            $navRow[] = Keyboard::button("📄 {$page}/{$totalPages}", 'noop');
+            if ($page < $totalPages) {
+                $navRow[] = Keyboard::button('Keyingi ➡️', "svc:page:{$subcategoryId}:" . ($page + 1));
+            }
+            $buttons[] = $navRow;
+        }
+
         $buttons[] = [Keyboard::button(I18nService::t('common.back', [], $locale), "subc:back:{$sub['category_id']}")];
 
         self::render($update, I18nService::t('catalog.choose_service', [], $locale), Keyboard::inline($buttons), $edit);
