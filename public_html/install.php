@@ -9,6 +9,9 @@ use App\Core\Database;
 use App\Services\AdminService;
 
 header('Content-Type: text/plain; charset=utf-8');
+if (function_exists('set_time_limit')) {
+    @set_time_limit(300);
+}
 
 if (PHP_SAPI !== 'cli') {
     $cronToken = (string) Config::get('cron_token', '');
@@ -157,7 +160,7 @@ if (PHP_SAPI !== 'cli') {
     }
 
     if ($action === 'debug_tg') {
-        echo "BUILD: v2-provider-sync\n";
+        echo "BUILD: v3-fast-sync\n";
         $token = Config::get('bot.token');
         echo "Token prefix: " . substr((string) $token, 0, 10) . "...\n";
         $getMe = \App\Core\Http::get("https://api.telegram.org/bot{$token}/getMe");

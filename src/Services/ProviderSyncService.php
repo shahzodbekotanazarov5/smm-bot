@@ -113,78 +113,91 @@ final class ProviderSyncService
             )'
         );
 
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(300);
+        }
+
         $created = 0;
         $updated = 0;
 
-        foreach ($rawServices as $s) {
-            if (!is_array($s)) {
-                continue;
+        $pdo->beginTransaction();
+        try {
+            foreach ($rawServices as $s) {
+                if (!is_array($s)) {
+                    continue;
+                }
+
+                $providerServiceId = (string) ($s['service'] ?? $s['id'] ?? '');
+                $name = trim((string) ($s['name'] ?? ''));
+                $catName = trim((string) ($s['category'] ?? 'General'));
+                $rate = (float) ($s['rate'] ?? 0);
+                $min = max(1, (int) ($s['min'] ?? 1));
+                $max = max($min, (int) ($s['max'] ?? 1000000));
+                $type = strtolower((string) ($s['type'] ?? 'default'));
+
+                if ($providerServiceId === '' || $name === '') {
+                    continue;
+                }
+
+                // Selling price with markup in UZS
+                $multiplier = 1 + ($markupPercent / 100.0);
+                if ($providerCurrency === 'USD' && $rate < 200) {
+                    $pricePer1000 = round($rate * $usdRate * $multiplier, 2);
+                } else {
+                    $pricePer1000 = round($rate * $multiplier, 2);
+                }
+
+                // Platform and subcategory detection
+                [$mainPlatform, $subName] = self::detectPlatformAndSubcategory($catName, $name);
+
+                $categoryId = self::getOrCreateCategoryCached($mainPlatform, $categoriesMap);
+                $subcategoryId = self::getOrCreateSubcategoryCached($categoryId, $subName, $subcategoriesMap);
+
+                $orderType = (str_contains($type, 'poll') || str_contains(strtolower($name), 'poll')) ? 'poll' : 'default';
+                $linkType = (str_contains(strtolower($name), 'username') || str_contains(strtolower($catName), 'username')) ? 'username' : 'url';
+
+                if (isset($existingServicesMap[$providerServiceId])) {
+                    $existingId = $existingServicesMap[$providerServiceId];
+                    $updateStmt->execute([
+                        ':sub_id' => $subcategoryId,
+                        ':name_uz' => $name,
+                        ':name_ru' => $name,
+                        ':name_en' => $name,
+                        ':rate' => $rate,
+                        ':price' => $pricePer1000,
+                        ':min' => $min,
+                        ':max' => $max,
+                        ':order_type' => $orderType,
+                        ':link_type' => $linkType,
+                        ':id' => $existingId,
+                    ]);
+                    $updated++;
+                } else {
+                    $insertStmt->execute([
+                        ':sub_id' => $subcategoryId,
+                        ':pid' => $providerId,
+                        ':psid' => $providerServiceId,
+                        ':name_uz' => $name,
+                        ':name_ru' => $name,
+                        ':name_en' => $name,
+                        ':order_type' => $orderType,
+                        ':link_type' => $linkType,
+                        ':rate' => $rate,
+                        ':price' => $pricePer1000,
+                        ':min' => $min,
+                        ':max' => $max,
+                    ]);
+                    $newId = (int) $pdo->lastInsertId();
+                    $existingServicesMap[$providerServiceId] = $newId;
+                    $created++;
+                }
             }
-
-            $providerServiceId = (string) ($s['service'] ?? $s['id'] ?? '');
-            $name = trim((string) ($s['name'] ?? ''));
-            $catName = trim((string) ($s['category'] ?? 'General'));
-            $rate = (float) ($s['rate'] ?? 0);
-            $min = max(1, (int) ($s['min'] ?? 1));
-            $max = max($min, (int) ($s['max'] ?? 1000000));
-            $type = strtolower((string) ($s['type'] ?? 'default'));
-
-            if ($providerServiceId === '' || $name === '') {
-                continue;
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
             }
-
-            // Selling price with markup in UZS
-            $multiplier = 1 + ($markupPercent / 100.0);
-            if ($providerCurrency === 'USD' && $rate < 200) {
-                $pricePer1000 = round($rate * $usdRate * $multiplier, 2);
-            } else {
-                $pricePer1000 = round($rate * $multiplier, 2);
-            }
-
-            // Platform and subcategory detection
-            [$mainPlatform, $subName] = self::detectPlatformAndSubcategory($catName, $name);
-
-            $categoryId = self::getOrCreateCategoryCached($mainPlatform, $categoriesMap);
-            $subcategoryId = self::getOrCreateSubcategoryCached($categoryId, $subName, $subcategoriesMap);
-
-            $orderType = (str_contains($type, 'poll') || str_contains(strtolower($name), 'poll')) ? 'poll' : 'default';
-            $linkType = (str_contains(strtolower($name), 'username') || str_contains(strtolower($catName), 'username')) ? 'username' : 'url';
-
-            if (isset($existingServicesMap[$providerServiceId])) {
-                $existingId = $existingServicesMap[$providerServiceId];
-                $updateStmt->execute([
-                    ':sub_id' => $subcategoryId,
-                    ':name_uz' => $name,
-                    ':name_ru' => $name,
-                    ':name_en' => $name,
-                    ':rate' => $rate,
-                    ':price' => $pricePer1000,
-                    ':min' => $min,
-                    ':max' => $max,
-                    ':order_type' => $orderType,
-                    ':link_type' => $linkType,
-                    ':id' => $existingId,
-                ]);
-                $updated++;
-            } else {
-                $insertStmt->execute([
-                    ':sub_id' => $subcategoryId,
-                    ':pid' => $providerId,
-                    ':psid' => $providerServiceId,
-                    ':name_uz' => $name,
-                    ':name_ru' => $name,
-                    ':name_en' => $name,
-                    ':order_type' => $orderType,
-                    ':link_type' => $linkType,
-                    ':rate' => $rate,
-                    ':price' => $pricePer1000,
-                    ':min' => $min,
-                    ':max' => $max,
-                ]);
-                $newId = (int) $pdo->lastInsertId();
-                $existingServicesMap[$providerServiceId] = $newId;
-                $created++;
-            }
+            throw $e;
         }
 
         // Run automatic backup matching after sync
@@ -234,47 +247,54 @@ final class ProviderSyncService
             'UPDATE services SET backup_provider_id = :bpid, backup_service_id = :bsid WHERE id = :id'
         );
 
-        $matchedCount = 0;
+        $pdo->beginTransaction();
+        try {
+            foreach ($allServices as $svc) {
+                if (!empty($svc['backup_provider_id'])) {
+                    continue; // Already has a backup
+                }
 
-        foreach ($allServices as $svc) {
-            if (!empty($svc['backup_provider_id'])) {
-                continue; // Already has a backup
-            }
+                $currentPid = (int) $svc['provider_id'];
+                $subId = (int) $svc['subcategory_id'];
+                $catId = (int) $svc['category_id'];
 
-            $currentPid = (int) $svc['provider_id'];
-            $subId = (int) $svc['subcategory_id'];
-            $catId = (int) $svc['category_id'];
+                $candidate = null;
 
-            $candidate = null;
-
-            // 1. Look in same subcategory from an alternative provider
-            if (isset($bySubcategory[$subId])) {
-                foreach ($bySubcategory[$subId] as $otherPid => $servicesList) {
-                    if ($otherPid !== $currentPid && !empty($servicesList)) {
-                        $candidate = $servicesList[0];
-                        break;
+                // 1. Look in same subcategory from an alternative provider
+                if (isset($bySubcategory[$subId])) {
+                    foreach ($bySubcategory[$subId] as $otherPid => $servicesList) {
+                        if ($otherPid !== $currentPid && !empty($servicesList)) {
+                            $candidate = $servicesList[0];
+                            break;
+                        }
                     }
                 }
-            }
 
-            // 2. If not found in subcategory, look in same main platform category
-            if ($candidate === null && isset($byCategory[$catId])) {
-                foreach ($byCategory[$catId] as $otherPid => $servicesList) {
-                    if ($otherPid !== $currentPid && !empty($servicesList)) {
-                        $candidate = $servicesList[0];
-                        break;
+                // 2. If not found in subcategory, look in same main platform category
+                if ($candidate === null && isset($byCategory[$catId])) {
+                    foreach ($byCategory[$catId] as $otherPid => $servicesList) {
+                        if ($otherPid !== $currentPid && !empty($servicesList)) {
+                            $candidate = $servicesList[0];
+                            break;
+                        }
                     }
                 }
-            }
 
-            if ($candidate !== null) {
-                $updateStmt->execute([
-                    ':bpid' => $candidate['provider_id'],
-                    ':bsid' => $candidate['provider_service_id'],
-                    ':id' => $svc['id'],
-                ]);
-                $matchedCount++;
+                if ($candidate !== null) {
+                    $updateStmt->execute([
+                        ':bpid' => $candidate['provider_id'],
+                        ':bsid' => $candidate['provider_service_id'],
+                        ':id' => $svc['id'],
+                    ]);
+                    $matchedCount++;
+                }
             }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
         }
 
         return $matchedCount;
