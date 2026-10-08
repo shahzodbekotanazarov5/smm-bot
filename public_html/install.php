@@ -24,6 +24,14 @@ if (PHP_SAPI !== 'cli') {
 
     if ($action === 'errors') {
         try {
+            Database::execute('CREATE TABLE IF NOT EXISTS bot_errors (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                error_message TEXT NOT NULL,
+                stack_trace TEXT NOT NULL,
+                update_data TEXT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+
             $errors = Database::fetchAll('SELECT * FROM bot_errors ORDER BY id DESC LIMIT 25');
             echo "Total recorded bot errors: " . count($errors) . "\n\n";
             foreach ($errors as $err) {
