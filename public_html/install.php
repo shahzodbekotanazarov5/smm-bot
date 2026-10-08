@@ -139,6 +139,16 @@ if (PHP_SAPI !== 'cli') {
         exit;
     }
 
+    if ($action === 'automatch') {
+        $startMatch = microtime(true);
+        $matched = \App\Services\ProviderSyncService::autoMatchBackups();
+        $matchDuration = round(microtime(true) - $startMatch, 2);
+        echo "Auto-matched failover backups in {$matchDuration}s: {$matched}\n";
+        $totalWithBackup = Database::fetchOne('SELECT COUNT(*) as cnt FROM services WHERE backup_provider_id IS NOT NULL');
+        echo "Total services with failover backup: " . ($totalWithBackup['cnt'] ?? 0) . "\n";
+        exit;
+    }
+
     if ($action === 'logs') {
         $appLog = dirname(__DIR__) . '/logs/app.log';
         $phpLog = dirname(__DIR__) . '/logs/php_errors.log';
@@ -160,7 +170,7 @@ if (PHP_SAPI !== 'cli') {
     }
 
     if ($action === 'debug_tg') {
-        echo "BUILD: v3-fast-sync\n";
+        echo "BUILD: v4-fix-matched\n";
         $token = Config::get('bot.token');
         echo "Token prefix: " . substr((string) $token, 0, 10) . "...\n";
         $getMe = \App\Core\Http::get("https://api.telegram.org/bot{$token}/getMe");

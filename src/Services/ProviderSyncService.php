@@ -200,9 +200,6 @@ final class ProviderSyncService
             throw $e;
         }
 
-        // Run automatic backup matching after sync
-        self::autoMatchBackups();
-
         return [
             'total' => count($rawServices),
             'created' => $created,
@@ -246,6 +243,8 @@ final class ProviderSyncService
         $updateStmt = $pdo->prepare(
             'UPDATE services SET backup_provider_id = :bpid, backup_service_id = :bsid WHERE id = :id'
         );
+
+        $matchedCount = 0;
 
         $pdo->beginTransaction();
         try {
