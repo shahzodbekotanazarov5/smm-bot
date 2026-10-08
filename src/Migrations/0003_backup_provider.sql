@@ -1,2 +1,2 @@
-ALTER TABLE services ADD COLUMN IF NOT EXISTS backup_provider_id BIGINT UNSIGNED NULL;
-ALTER TABLE services ADD COLUMN IF NOT EXISTS backup_service_id VARCHAR(50) NULL;
+ALTER TABLE services ADD COLUMN backup_provider_id BIGINT UNSIGNED NULL;
+ALTER TABLE services ADD COLUMN backup_service_id VARCHAR(50) NULL;

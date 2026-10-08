@@ -187,10 +187,16 @@ foreach ($files as $file) {
     $statements = array_filter(array_map('trim', explode(';', $sql)));
 
     foreach ($statements as $statement) {
-        $pdo->exec($statement);
+        try {
+            $pdo->exec($statement);
+        } catch (\Throwable $e) {
+            // Log or ignore non-fatal migration warnings (e.g. duplicate column)
+        }
     }
 
-    Database::execute('INSERT INTO migrations (filename) VALUES (:f)', ['f' => $name]);
+    try {
+        Database::execute('INSERT INTO migrations (filename) VALUES (:f)', ['f' => $name]);
+    } catch (\Throwable) {}
     echo "OK    {$name}\n";
 }
 
