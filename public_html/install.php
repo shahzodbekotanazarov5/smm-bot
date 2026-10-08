@@ -90,6 +90,19 @@ if (PHP_SAPI !== 'cli') {
         exit;
     }
 
+    if ($action === 'catalog_summary') {
+        $cats = Database::fetchAll('SELECT * FROM categories ORDER BY id ASC');
+        foreach ($cats as $c) {
+            echo "Category #{$c['id']}: UZ: {$c['name_uz']} | RU: {$c['name_ru']} | EN: {$c['name_en']}\n";
+            $subs = Database::fetchAll('SELECT sub.*, COUNT(s.id) as svc_cnt FROM subcategories sub LEFT JOIN services s ON s.subcategory_id = sub.id WHERE sub.category_id = :cid GROUP BY sub.id ORDER BY sub.id ASC', ['cid' => $c['id']]);
+            foreach ($subs as $s) {
+                echo "   -> Sub #{$s['id']}: {$s['name_uz']} ({$s['svc_cnt']} services)\n";
+            }
+            echo "\n";
+        }
+        exit;
+    }
+
     if ($action === 'test_providers') {
         $providers = Database::fetchAll('SELECT * FROM providers WHERE is_active = 1');
         foreach ($providers as $p) {
