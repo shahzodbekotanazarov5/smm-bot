@@ -81,6 +81,22 @@ if (PHP_SAPI !== 'cli') {
         exit;
     }
 
+    if ($action === 'sync_all_providers') {
+        $providers = Database::fetchAll('SELECT id, name FROM providers WHERE is_active = 1');
+        foreach ($providers as $p) {
+            echo "Syncing provider #{$p['id']}: {$p['name']}...\n";
+            try {
+                $res = \App\Services\ProviderSyncService::syncServicesFromProvider((int) $p['id']);
+                echo "Result: " . json_encode($res, JSON_UNESCAPED_UNICODE) . "\n";
+            } catch (\Throwable $e) {
+                echo "Failed: " . $e->getMessage() . "\n";
+            }
+        }
+        $matched = \App\Services\ProviderSyncService::autoMatchBackups();
+        echo "Auto-matched failover backups: {$matched}\n";
+        exit;
+    }
+
     if ($action === 'logs') {
         $appLog = dirname(__DIR__) . '/logs/app.log';
         $phpLog = dirname(__DIR__) . '/logs/php_errors.log';

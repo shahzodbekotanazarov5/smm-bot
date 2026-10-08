@@ -30,8 +30,11 @@ final class OrderService
     public static function loadServiceWithProvider(int $serviceId): ?array
     {
         return Database::fetchOne(
-            'SELECT s.*, p.api_url, p.api_key, p.is_active AS provider_active
-             FROM services s JOIN providers p ON p.id = s.provider_id
+            'SELECT s.*, p.api_url, p.api_key, p.is_active AS provider_active,
+                    bp.api_url AS backup_api_url, bp.api_key AS backup_api_key, bp.is_active AS backup_provider_active
+             FROM services s
+             JOIN providers p ON p.id = s.provider_id
+             LEFT JOIN providers bp ON bp.id = s.backup_provider_id
              WHERE s.id = :id',
             ['id' => $serviceId]
         );
@@ -121,16 +124,16 @@ final class OrderService
             }
         });
 
-        try {
-            $params = [
-                'service' => $service['provider_service_id'],
-                'link' => $target,
-                'quantity' => $quantity,
-            ];
-            if ($pollAnswer !== null) {
-                $params['answer_number'] = $pollAnswer;
-            }
+        $params = [
+            'service' => $service['provider_service_id'],
+            'link' => $target,
+            'quantity' => $quantity,
+        ];
+        if ($pollAnswer !== null) {
+            $params['answer_number'] = $pollAnswer;
+        }
 
+        try {
             $result = $client->add($params);
 
             if (empty($result['order'])) {
@@ -141,14 +144,45 @@ final class OrderService
                 'UPDATE orders SET provider_order_id = :poid, status = :status WHERE id = :id',
                 ['poid' => (string) $result['order'], 'status' => 'in_progress', 'id' => $orderId]
             );
-        } catch (ProviderException $e) {
-            WalletService::refundOrder($userId, $orderId, $price, 'Order placement failed: ' . $e->getMessage());
-            Database::execute(
-                'UPDATE orders SET status = :status, refunded_amount = :amt WHERE id = :id',
-                ['status' => 'failed', 'amt' => $price, 'id' => $orderId]
-            );
+        } catch (ProviderException $primaryException) {
+            Logger::warning("Primary provider #{$service['provider_id']} failed for order #{$orderId}: " . $primaryException->getMessage());
 
-            throw $e;
+            $failoverSuccess = false;
+            if (!empty($service['backup_provider_id']) && !empty($service['backup_service_id']) && !empty($service['backup_api_url']) && (int) ($service['backup_provider_active'] ?? 0) === 1) {
+                try {
+                    Logger::info("Attempting failover for order #{$orderId} to backup provider #{$service['backup_provider_id']}");
+                    $backupClient = new ProviderClient((string) $service['backup_api_url'], (string) $service['backup_api_key']);
+                    $backupParams = $params;
+                    $backupParams['service'] = $service['backup_service_id'];
+
+                    $backupResult = $backupClient->add($backupParams);
+                    if (!empty($backupResult['order'])) {
+                        Database::execute(
+                            'UPDATE orders SET provider_id = :pid, provider_order_id = :poid, status = :status WHERE id = :id',
+                            [
+                                'pid' => $service['backup_provider_id'],
+                                'poid' => (string) $backupResult['order'],
+                                'status' => 'in_progress',
+                                'id' => $orderId,
+                            ]
+                        );
+                        $failoverSuccess = true;
+                        Logger::info("Failover succeeded for order #{$orderId}! Executed on backup provider #{$service['backup_provider_id']} (order {$backupResult['order']})");
+                    }
+                } catch (\Throwable $backupException) {
+                    Logger::error("Backup provider #{$service['backup_provider_id']} also failed for order #{$orderId}: " . $backupException->getMessage());
+                }
+            }
+
+            if (!$failoverSuccess) {
+                WalletService::refundOrder($userId, $orderId, $price, 'Order placement failed: ' . $primaryException->getMessage());
+                Database::execute(
+                    'UPDATE orders SET status = :status, refunded_amount = :amt WHERE id = :id',
+                    ['status' => 'failed', 'amt' => $price, 'id' => $orderId]
+                );
+
+                throw $primaryException;
+            }
         }
 
         UserService::incrementOrderStats($userId);

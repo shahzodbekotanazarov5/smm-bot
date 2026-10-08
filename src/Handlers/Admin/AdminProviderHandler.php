@@ -24,6 +24,8 @@ final class AdminProviderHandler
             'add' => self::startAdd($update, $locale),
             'view' => self::showDetail((int) ($parts[3] ?? 0), $update, $locale),
             'balance' => self::showBalance((int) ($parts[3] ?? 0), $update, $locale),
+            'sync' => self::syncServices((int) ($parts[3] ?? 0), $update, $locale),
+            'automatch' => self::autoMatchBackups($update, $locale),
             'del' => self::delete((int) ($parts[3] ?? 0), $update, $locale),
             'setcur' => self::handleSetCurrencyCallback((string) ($parts[3] ?? 'USD'), $update, $locale),
             default => null,
@@ -41,6 +43,9 @@ final class AdminProviderHandler
             $providers
         );
         $buttons[] = [Keyboard::button(I18nService::t('admin.providers.add', [], $locale), 'adm:prov:add')];
+        if (count($providers) >= 2) {
+            $buttons[] = [Keyboard::button("🔄 Zaxira (failover) bog'lash", 'adm:prov:automatch')];
+        }
         $buttons[] = [Keyboard::button(I18nService::t('common.back', [], $locale), 'adm:menu:root')];
 
         $text = I18nService::t('admin.providers.title', [], $locale);
@@ -55,6 +60,7 @@ final class AdminProviderHandler
         }
 
         $buttons = [
+            [Keyboard::button("📥 Xizmatlarni yuklab olish", "adm:prov:sync:{$id}")],
             [Keyboard::button(I18nService::t('admin.providers.check_balance_button', [], $locale), "adm:prov:balance:{$id}")],
             [Keyboard::button(I18nService::t('admin.providers.delete_button', [], $locale), "adm:prov:del:{$id}")],
             [Keyboard::button(I18nService::t('common.back', [], $locale), 'adm:prov:menu')],
@@ -62,6 +68,32 @@ final class AdminProviderHandler
 
         $text = "🔌 <b>{$provider['name']}</b>\n{$provider['api_url']}";
         self::render($update, $text, Keyboard::inline($buttons), true);
+    }
+
+    private static function syncServices(int $id, Update $update, string $locale): void
+    {
+        TelegramApi::sendMessage((int) $update->chatId, "⏳ Provayderdan xizmatlar yuklab olinmoqda, iltimos kuting...");
+        try {
+            $stats = \App\Services\ProviderSyncService::syncServicesFromProvider($id);
+            $text = "✅ <b>Xizmatlar muvaffaqiyatli yuklab olindi!</b>\n\n"
+                . "📦 Jami: {$stats['total']} ta\n"
+                . "➕ Yangi qo'shildi: {$stats['created']} ta\n"
+                . "🔄 Yangilandi: {$stats['updated']} ta\n\n"
+                . "Zaxira provayderlar ham avtomatik tekshirildi.";
+            TelegramApi::sendMessage((int) $update->chatId, $text);
+        } catch (\Throwable $e) {
+            TelegramApi::sendMessage((int) $update->chatId, "⚠️ Xatolik yuz berdi: " . $e->getMessage());
+        }
+    }
+
+    private static function autoMatchBackups(Update $update, string $locale): void
+    {
+        try {
+            $count = \App\Services\ProviderSyncService::autoMatchBackups();
+            TelegramApi::sendMessage((int) $update->chatId, "✅ <b>{$count}</b> ta xizmat uchun zaxira provayder (failover) muvaffaqiyatli bog'landi!");
+        } catch (\Throwable $e) {
+            TelegramApi::sendMessage((int) $update->chatId, "⚠️ Xatolik: " . $e->getMessage());
+        }
     }
 
     private static function showBalance(int $id, Update $update, string $locale): void
