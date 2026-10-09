@@ -191,32 +191,19 @@ if (PHP_SAPI !== 'cli') {
         exit;
     }
 
-    if ($action === 'find_best_services') {
+    if ($action === 'dump_all_services_json') {
+        header('Content-Type: application/json; charset=utf-8');
         $providers = Database::fetchAll('SELECT * FROM providers WHERE is_active = 1');
+        $out = [];
         foreach ($providers as $p) {
-            echo "========================================\n";
-            echo "PROVIDER #{$p['id']}: {$p['name']} ({$p['currency']})\n";
-            echo "========================================\n";
             $client = new \App\Services\ProviderClient((string) $p['api_url'], (string) $p['api_key']);
-            $services = $client->services();
-            echo "Total services: " . count($services) . "\n\n";
-
-            // Group by category
-            $byCat = [];
-            foreach ($services as $s) {
-                $cat = $s['category'] ?? 'Uncategorized';
-                $byCat[$cat][] = $s;
-            }
-
-            foreach ($byCat as $catName => $items) {
-                echo "Category: {$catName} (" . count($items) . " services)\n";
-                // Show sample 3 services
-                foreach (array_slice($items, 0, 3) as $it) {
-                    echo "  -> ID: {$it['service']} | Name: {$it['name']} | Rate: {$it['rate']} | Min: {$it['min']} | Max: {$it['max']}\n";
-                }
-            }
-            echo "\n";
+            $out[(int) $p['id']] = [
+                'name' => $p['name'],
+                'currency' => $p['currency'],
+                'services' => $client->services(),
+            ];
         }
+        echo json_encode($out, JSON_UNESCAPED_UNICODE);
         exit;
     }
 
