@@ -182,13 +182,18 @@ final class OrderHandler
 
         SessionState::set((int) $update->telegramUserId, 'order:awaiting_confirm', $payload);
 
+        $priceFormatted = $price <= 0
+            ? I18nService::t('order.free_badge', [], $locale)
+            : number_format($price, 0, '.', ' ');
+        $currencyFormatted = $price <= 0 ? '' : $currency;
+
         $text = I18nService::t('order.confirm', [
             'service' => CatalogService::localizedName($service, $locale),
             'quantity' => $quantity,
             'link' => $payload['link'],
-            'price' => number_format($price, 2),
-            'currency' => $currency,
-            'balance' => number_format((float) $user['balance'], 2),
+            'price' => $priceFormatted,
+            'currency' => $currencyFormatted,
+            'balance' => number_format((float) $user['balance'], 0, '.', ' '),
         ], $locale);
 
         $buttons = [
@@ -225,14 +230,23 @@ final class OrderHandler
                 isset($payload['poll_answer']) ? (int) $payload['poll_answer'] : null
             );
 
+            $chargeDisplay = (float) $order['charge_amount'] <= 0
+                ? I18nService::t('order.free_badge', [], $locale)
+                : number_format((float) $order['charge_amount'], 0, '.', ' ') . ' ' . $currency;
+
             self::editOrSend($update, I18nService::t('order.placed', [
                 'order_id' => $order['id'],
-                'price' => number_format((float) $order['charge_amount'], 2),
-                'currency' => $currency,
+                'price' => $chargeDisplay,
+                'currency' => '',
             ], $locale));
         } catch (InsufficientBalanceException) {
             self::editOrSend($update, I18nService::t('order.insufficient_balance', [], $locale));
         } catch (\Throwable $e) {
+            if ($e->getMessage() === 'free_limit_reached') {
+                self::editOrSend($update, I18nService::t('order.free_limit_reached', [], $locale));
+
+                return;
+            }
             Logger::error('Order placement failed: ' . $e->getMessage());
             self::editOrSend($update, I18nService::t('order.failed', [], $locale));
         }

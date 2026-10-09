@@ -66,6 +66,17 @@ final class CatalogCuratorService
                         ],
                         'services' => [
                             [
+                                'uz' => '⚡️ Instagram Obunachi — Ultra Arzon (😱 Aksiya)',
+                                'ru' => '⚡️ Подписчики Instagram — Ультра Эконом (Акция)',
+                                'en' => '⚡️ Instagram Followers — Ultra Cheap (Sale)',
+                                'price' => 5900.0,
+                                'rate' => 3900.00,
+                                'min' => 2000,
+                                'max' => 100000,
+                                'p1' => $p2, 's1' => '531', // Shox SMM (3 900 so'm)
+                                'p2' => $p2, 's2' => '476', // Shox SMM (4 500 so'm)
+                            ],
+                            [
                                 'uz' => '👤 Instagram Obunachi — Hamyonbop (Tezkor)',
                                 'ru' => '👤 Подписчики Instagram — Эконом (Быстрые)',
                                 'en' => '👤 Instagram Followers — Economy (Fast)',
@@ -1069,6 +1080,87 @@ final class CatalogCuratorService
                                 'max' => 322,
                                 'p1' => $p1, 's1' => '891', // NeoSMM (50 000 so'm)
                                 'p2' => $p1, 's2' => '891',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'cat' => [
+                    'uz' => '🎁 Bepul xizmatlar',
+                    'ru' => '🎁 Бесплатные услуги',
+                    'en' => '🎁 Free Services',
+                    'sort' => 7,
+                ],
+                'subs' => [
+                    [
+                        'name' => [
+                            'uz' => '🎁 Instagram (Sinov)',
+                            'ru' => '🎁 Instagram (Тест)',
+                            'en' => '🎁 Instagram (Trial)',
+                        ],
+                        'services' => [
+                            [
+                                'uz' => '🎥 Bepul Reels Ko\'rish (100 ta sinov)',
+                                'ru' => '🎥 Бесплатные Просмотры Reels (100 шт тест)',
+                                'en' => '🎥 Free Reels Views (100 test views)',
+                                'price' => 0.0,
+                                'rate' => 15.00,
+                                'min' => 100,
+                                'max' => 100,
+                                'p1' => $p2, 's1' => '817', // Shox SMM (15 so'm)
+                                'p2' => $p2, 's2' => '817',
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => [
+                            'uz' => '🎁 Telegram (Sinov)',
+                            'ru' => '🎁 Telegram (Тест)',
+                            'en' => '🎁 Telegram (Trial)',
+                        ],
+                        'services' => [
+                            [
+                                'uz' => '👁 Bepul Post Ko\'rish (100 ta sinov)',
+                                'ru' => '👁 Бесплатные Просмотры (100 шт тест)',
+                                'en' => '👁 Free Post Views (100 test views)',
+                                'price' => 0.0,
+                                'rate' => 36.00,
+                                'min' => 10,
+                                'max' => 100,
+                                'p1' => $p2, 's1' => '819', // Shox SMM (36 so'm)
+                                'p2' => $p2, 's2' => '819',
+                            ],
+                            [
+                                'uz' => '👍 Bepul Post Reaksiyasi (25 ta sinov)',
+                                'ru' => '👍 Бесплатные Реакции (25 шт тест)',
+                                'en' => '👍 Free Post Reactions (25 test)',
+                                'price' => 0.0,
+                                'rate' => 162.00,
+                                'min' => 2,
+                                'max' => 25,
+                                'p1' => $p2, 's1' => '820', // Shox SMM (162 so'm)
+                                'p2' => $p2, 's2' => '820',
+                            ],
+                        ],
+                    ],
+                    [
+                        'name' => [
+                            'uz' => '🎁 TikTok (Sinov)',
+                            'ru' => '🎁 TikTok (Тест)',
+                            'en' => '🎁 TikTok (Trial)',
+                        ],
+                        'services' => [
+                            [
+                                'uz' => '🎵 Bepul Video Ko\'rish (100 ta sinov)',
+                                'ru' => '🎵 Бесплатные Просмотры (100 шт тест)',
+                                'en' => '🎵 Free Video Views (100 test views)',
+                                'price' => 0.0,
+                                'rate' => 30.00,
+                                'min' => 100,
+                                'max' => 100,
+                                'p1' => $p1, 's1' => '1241', // NeoSMM (30 so'm)
+                                'p2' => $p1, 's2' => '1241',
                             ],
                         ],
                     ],

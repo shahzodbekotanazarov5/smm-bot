@@ -69,8 +69,21 @@ final class OrderService
         $price = self::calculatePrice($service, $quantity);
         $extra = $pollAnswer !== null ? json_encode(['answer_number' => $pollAnswer]) : null;
 
+        // Anti-abuse protection for free services (0 UZS): limit to 1 per 24 hours per user
+        if ($price <= 0) {
+            $recentFree = Database::fetchOne(
+                'SELECT id FROM orders WHERE user_id = :uid AND charge_amount <= 0 AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1',
+                ['uid' => $userId]
+            );
+            if ($recentFree !== null) {
+                throw new \RuntimeException('free_limit_reached');
+            }
+        }
+
         $orderId = Database::transaction(function () use ($userId, $service, $price, $target, $quantity, $extra) {
-            WalletService::debit($userId, $price, 'order_charge');
+            if ($price > 0) {
+                WalletService::debit($userId, $price, 'order_charge');
+            }
 
             Database::execute(
                 'INSERT INTO orders (
@@ -99,7 +112,7 @@ final class OrderService
 
         $client = new ProviderClient((string) $service['api_url'], (string) $service['api_key']);
 
-        // Safety net: the balance was already debited above. If the process
+        // Safety net: the balance was already debited above (if price > 0). If the process
         // is killed outright while the provider call below is in flight
         // (e.g. PHP's max_execution_time is hit — a fatal that bypasses the
         // catch block below entirely), this still runs on shutdown and
@@ -114,7 +127,9 @@ final class OrderService
             }
 
             try {
-                WalletService::refundOrder($userId, $orderId, $price, 'Refunded after unexpected termination during provider call');
+                if ($price > 0) {
+                    WalletService::refundOrder($userId, $orderId, $price, 'Refunded after unexpected termination during provider call');
+                }
                 Database::execute(
                     'UPDATE orders SET status = :status, refunded_amount = :amt WHERE id = :id',
                     ['status' => 'failed', 'amt' => $price, 'id' => $orderId]
@@ -175,7 +190,9 @@ final class OrderService
             }
 
             if (!$failoverSuccess) {
-                WalletService::refundOrder($userId, $orderId, $price, 'Order placement failed: ' . $primaryException->getMessage());
+                if ($price > 0) {
+                    WalletService::refundOrder($userId, $orderId, $price, 'Order placement failed: ' . $primaryException->getMessage());
+                }
                 Database::execute(
                     'UPDATE orders SET status = :status, refunded_amount = :amt WHERE id = :id',
                     ['status' => 'failed', 'amt' => $price, 'id' => $orderId]

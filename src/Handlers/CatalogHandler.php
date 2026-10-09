@@ -150,7 +150,10 @@ final class CatalogHandler
             if (mb_strlen($name) > 36) {
                 $name = mb_substr($name, 0, 33) . '...';
             }
-            $priceText = number_format((float) $s['price_per_1000'], 0, '.', ' ') . ' ' . $currency;
+            $isFree = (float) $s['price_per_1000'] <= 0;
+            $priceText = $isFree
+                ? I18nService::t('order.free_badge', [], $locale)
+                : number_format((float) $s['price_per_1000'], 0, '.', ' ') . ' ' . $currency;
             $buttons[] = [Keyboard::button("{$name} — {$priceText}", "svc:{$s['id']}")];
         }
 
@@ -180,10 +183,16 @@ final class CatalogHandler
         }
 
         $currency = I18nService::t('common.currency', [], $locale);
+        $isFree = (float) $service['price_per_1000'] <= 0;
+        $priceVal = $isFree
+            ? I18nService::t('order.free_badge', [], $locale)
+            : number_format((float) $service['price_per_1000'], 0, '.', ' ');
+        $currVal = $isFree ? '' : $currency;
+
         $text = I18nService::t('catalog.service_details', [
             'name' => CatalogService::localizedName($service, $locale),
-            'price' => number_format((float) $service['price_per_1000'], 0, '.', ' '),
-            'currency' => $currency,
+            'price' => $priceVal,
+            'currency' => $currVal,
             'min' => number_format((float) $service['min_quantity'], 0, '.', ' '),
             'max' => number_format((float) $service['max_quantity'], 0, '.', ' '),
         ], $locale);

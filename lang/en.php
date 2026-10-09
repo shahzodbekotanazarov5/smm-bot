@@ -53,6 +53,8 @@ return [
     'order.placed' => '✅ Order placed!\n\n🆔 Order number: #{order_id}\n💵 Price: {price} {currency}',
     'order.failed' => '❌ Failed to place the order. Your funds have been refunded.',
     'order.canceled_by_user' => '🚫 Canceled.',
+    'order.free_badge' => '🎁 Free',
+    'order.free_limit_reached' => '⚠️ You have already used a free trial service in the last 24 hours. Free trial is available once every 24 hours.',
     'order.history_empty' => '📭 You don\'t have any orders yet.',
     'order.history_title' => '🛒 <b>My orders</b>',
     'order.history_item' => '🆔 #{id} | {status}\n{name}\n🔢 {quantity} pcs | 💵 {price} {currency}\n📅 {date}',

@@ -53,6 +53,8 @@ return [
     'order.placed' => '✅ Buyurtma qabul qilindi!\n\n🆔 Buyurtma raqami: #{order_id}\n💵 Narx: {price} {currency}',
     'order.failed' => '❌ Buyurtmani joylashtirishda xatolik yuz berdi. Pulingiz hisobingizga qaytarildi.',
     'order.canceled_by_user' => '🚫 Bekor qilindi.',
+    'order.free_badge' => '🎁 Bepul',
+    'order.free_limit_reached' => '⚠️ Siz so\'nggi 24 soat ichida bepul sinov xizmatidan foydalangansiz. Bepul sinov kuniga 1 marta beriladi.',
     'order.history_empty' => '📭 Sizda hali buyurtmalar yo\'q.',
     'order.history_title' => '🛒 <b>Buyurtmalarim</b>',
     'order.history_item' => '🆔 #{id} | {status}\n{name}\n🔢 {quantity} ta | 💵 {price} {currency}\n📅 {date}',

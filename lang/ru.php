@@ -53,6 +53,8 @@ return [
     'order.placed' => '✅ Заказ принят!\n\n🆔 Номер заказа: #{order_id}\n💵 Цена: {price} {currency}',
     'order.failed' => '❌ Ошибка при оформлении заказа. Средства возвращены на баланс.',
     'order.canceled_by_user' => '🚫 Отменено.',
+    'order.free_badge' => '🎁 Бесплатно',
+    'order.free_limit_reached' => '⚠️ Вы уже использовали бесплатную тестовую услугу за последние 24 часа. Доступно 1 раз в сутки.',
     'order.history_empty' => '📭 У вас пока нет заказов.',
     'order.history_title' => '🛒 <b>Мои заказы</b>',
     'order.history_item' => '🆔 #{id} | {status}\n{name}\n🔢 {quantity} шт | 💵 {price} {currency}\n📅 {date}',
