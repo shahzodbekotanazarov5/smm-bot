@@ -850,37 +850,37 @@ final class CatalogCuratorService
                         ],
                         'services' => [
                             [
-                                'uz' => '⭐️ 50 ta Telegram Stars',
-                                'ru' => '⭐️ 50 шт Telegram Stars',
-                                'en' => '⭐️ 50 Telegram Stars',
-                                'price' => 349000.0, // 349 000 / 1000 * 50 = 17 450 so'm
+                                'uz' => '⭐️ Telegram Stars — Hamyonbop (Arzon)',
+                                'ru' => '⭐️ Telegram Stars — Эконом (Низкая цена)',
+                                'en' => '⭐️ Telegram Stars — Economy',
+                                'price' => 329000.0,
                                 'rate' => 220000.00,
                                 'min' => 50,
-                                'max' => 50,
+                                'max' => 50000,
                                 'p1' => $p1, 's1' => '1409', // NeoSMM (220 000 so'm)
                                 'p2' => $p2, 's2' => '25',   // Shox SMM (230 000 so'm)
                             ],
                             [
-                                'uz' => '⭐️ 100 ta Telegram Stars',
-                                'ru' => '⭐️ 100 шт Telegram Stars',
-                                'en' => '⭐️ 100 Telegram Stars',
-                                'price' => 349000.0, // 349 000 / 1000 * 100 = 34 900 so'm
-                                'rate' => 220000.00,
-                                'min' => 100,
-                                'max' => 100,
-                                'p1' => $p1, 's1' => '1409',
-                                'p2' => $p2, 's2' => '25',
+                                'uz' => '⭐️ Telegram Stars — Standart (⚡️ Tezkor)',
+                                'ru' => '⭐️ Telegram Stars — Стандарт (⚡️ Быстрые)',
+                                'en' => '⭐️ Telegram Stars — Standard (⚡️ Fast)',
+                                'price' => 369000.0,
+                                'rate' => 235000.00,
+                                'min' => 50,
+                                'max' => 50000,
+                                'p1' => $p1, 's1' => '1410', // NeoSMM (235 000 so'm)
+                                'p2' => $p2, 's2' => '26',   // Shox SMM (250 000 so'm)
                             ],
                             [
-                                'uz' => '⭐️ 500 ta Telegram Stars',
-                                'ru' => '⭐️ 500 шт Telegram Stars',
-                                'en' => '⭐️ 500 Telegram Stars',
-                                'price' => 349000.0, // 349 000 / 1000 * 500 = 174 500 so'm
-                                'rate' => 220000.00,
-                                'min' => 500,
-                                'max' => 500,
-                                'p1' => $p1, 's1' => '1409',
-                                'p2' => $p2, 's2' => '25',
+                                'uz' => '⭐️ Telegram Stars — Premium (💎 Bir zumda)',
+                                'ru' => '⭐️ Telegram Stars — Премиум (💎 Моментально)',
+                                'en' => '⭐️ Telegram Stars — Premium (💎 Instant)',
+                                'price' => 419000.0,
+                                'rate' => 260000.00,
+                                'min' => 50,
+                                'max' => 50000,
+                                'p1' => $p1, 's1' => '1411', // NeoSMM (260 000 so'm)
+                                'p2' => $p2, 's2' => '26',   // Shox SMM (250 000 so'm)
                             ],
                         ],
                     ],
