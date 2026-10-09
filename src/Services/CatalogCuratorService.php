@@ -1172,6 +1172,11 @@ final class CatalogCuratorService
         $insertedCount = 0;
 
         try {
+            // Deactivate raw/unverified old items so only the curated catalog is active
+            Database::execute('UPDATE categories SET is_active = 0');
+            Database::execute('UPDATE subcategories SET is_active = 0');
+            Database::execute('UPDATE services SET is_active = 0');
+
             foreach ($structure as $item) {
                 $catData = $item['cat'];
                 $catNameUz = $catData['uz'];
