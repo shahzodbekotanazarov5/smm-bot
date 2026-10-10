@@ -53,7 +53,6 @@ final class AdminSettingsHandler
             [Keyboard::button(I18nService::t('admin.settings.markup_button', [], $locale), 'adm:settings:markup')],
             [Keyboard::button(I18nService::t('admin.settings.usd_rate_button', [], $locale), 'adm:settings:usdrate')],
             [Keyboard::button(I18nService::t('admin.settings.contact_button', [], $locale), 'adm:settings:contact')],
-            [Keyboard::button(I18nService::t('admin.settings.channels_button', [], $locale), 'adm:settings:channels')],
             [Keyboard::button(I18nService::t('admin.settings.toggle_bot_button', [], $locale), 'adm:settings:toggle_bot')],
             [Keyboard::button(I18nService::t('common.back', [], $locale), 'adm:menu:root')],
         ];

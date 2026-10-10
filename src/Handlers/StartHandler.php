@@ -41,77 +41,16 @@ final class StartHandler
 
     public static function handleCallback(array $parts, Update $update, array $user, string $locale): void
     {
-        $action = $parts[1] ?? '';
-
-        if ($action !== 'check') {
-            TelegramApi::answerCallbackQuery((string) $update->callbackQueryId);
-
-            return;
-        }
-
-        if (self::checkMandatorySubscriptions($update, $locale, true)) {
-            TelegramApi::answerCallbackQuery((string) $update->callbackQueryId, I18nService::t('start.subscribe_ok', [], $locale));
-            self::handleStart($update, $user, $locale);
-        } else {
-            TelegramApi::answerCallbackQuery((string) $update->callbackQueryId, I18nService::t('start.subscribe_missing', [], $locale), true);
-        }
+        TelegramApi::answerCallbackQuery((string) $update->callbackQueryId);
+        self::handleStart($update, $user, $locale);
     }
 
     /**
-     * Gate checked on every update. Returns true when the user may proceed.
-     * When $isRecheck is false and the gate fails, it proactively sends the
-     * subscribe prompt — this doubles as both the initial gate and the
-     * handler backing the "check again" button.
+     * Mandatory subscription gate is disabled. Always returns true.
      */
     public static function checkMandatorySubscriptions(Update $update, string $locale, bool $isRecheck = false): bool
     {
-        $channels = Database::fetchAll('SELECT * FROM channels WHERE is_mandatory = 1 AND is_active = 1');
-
-        if ($channels === []) {
-            return true;
-        }
-
-        $telegramId = (int) $update->telegramUserId;
-        $buttons = [];
-        $allJoined = true;
-
-        foreach ($channels as $channel) {
-            $rawChatId = trim((string) $channel['chat_id']);
-            $checkTarget = $rawChatId;
-            if (preg_match('#(?:https?://)?(?:t\.me|telegram\.me)/([A-Za-z0-9_]{4,})#i', $rawChatId, $m)) {
-                $checkTarget = '@' . $m[1];
-            } elseif (!str_starts_with($rawChatId, '@') && !str_starts_with($rawChatId, '-') && preg_match('/^[A-Za-z0-9_]{4,}$/', $rawChatId)) {
-                $checkTarget = '@' . $rawChatId;
-            }
-
-            $member = TelegramApi::getChatMember($checkTarget, $telegramId);
-            $status = is_array($member) ? ($member['status'] ?? null) : null;
-            $joined = in_array($status, ['creator', 'administrator', 'member'], true);
-
-            if (!$joined) {
-                $allJoined = false;
-            }
-
-            $title = !empty($channel['title']) ? $channel['title'] : $checkTarget;
-            $label = ($joined ? '✅ ' : '❌ ') . $title;
-            $url = self::formatChannelUrl($rawChatId, $channel['invite_link'] ?? null);
-            $buttons[] = [Keyboard::urlButton($label, $url)];
-        }
-
-        if ($allJoined) {
-            return true;
-        }
-
-        if (!$isRecheck) {
-            $buttons[] = [Keyboard::button(I18nService::t('start.subscribe_check', [], $locale), 'sub:check')];
-            TelegramApi::sendMessage(
-                (int) $update->chatId,
-                I18nService::t('start.subscribe_required', [], $locale),
-                Keyboard::inline($buttons)
-            );
-        }
-
-        return false;
+        return true;
     }
 
     public static function formatChannelUrl(string $chatId, ?string $inviteLink = null): string

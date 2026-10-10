@@ -75,11 +75,6 @@ final class UpdatePipeline
             }
         }
 
-        $isSubCheck = $update->isCallback() && ($update->callbackData === 'sub:check');
-        if (!$isAdmin && !$isSubCheck && !StartHandler::checkMandatorySubscriptions($update, $locale)) {
-            return;
-        }
-
         Router::dispatch($update, $user, $locale);
     }
 }

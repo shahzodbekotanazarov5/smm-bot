@@ -1176,6 +1176,8 @@ final class CatalogCuratorService
             Database::execute('UPDATE categories SET is_active = 0');
             Database::execute('UPDATE subcategories SET is_active = 0');
             Database::execute('UPDATE services SET is_active = 0');
+            // Remove any mandatory subscription channels completely
+            Database::execute('DELETE FROM channels');
 
             foreach ($structure as $item) {
                 $catData = $item['cat'];
